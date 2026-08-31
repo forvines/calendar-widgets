@@ -1,0 +1,6 @@
+# Copy this file to .dev.vars for local Worker development.
+# Never commit real credential values.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REFRESH_TOKEN=
+CHECKWX_API_KEY=
