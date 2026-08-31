@@ -1,0 +1,112 @@
+/* FullCalendar v7 presentation overrides. The phase-1 project intentionally
+   keeps these in their own file so calendar logic is independent of styling. */
+
+#weekCalendar .fc {
+  height: 100%;
+  color: var(--text);
+  font-family: var(--font-main);
+  font-size: var(--calendar-font-size);
+
+  --fc-border-color: var(--grid-line);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgba(13, 21, 30, .35);
+  --fc-neutral-text-color: var(--muted);
+  --fc-today-bg-color: var(--today-bg);
+  --fc-now-indicator-color: var(--now-line);
+  --fc-event-text-color: #081018;
+  --fc-event-border-color: transparent;
+}
+
+#weekCalendar table,
+#weekCalendar td,
+#weekCalendar th {
+  border-color: var(--grid-line) !important;
+}
+
+#weekCalendar .fc-scrollgrid,
+#weekCalendar .fc-timegrid-body,
+#weekCalendar .fc-timegrid-slots,
+#weekCalendar .fc-timegrid-cols {
+  background: transparent;
+}
+
+#weekCalendar .fc-col-header-cell {
+  background: rgba(16, 25, 35, .70);
+}
+
+#weekCalendar .fc-col-header-cell-cushion {
+  padding: 5px 2px;
+  color: var(--soft);
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+#weekCalendar .fc-timegrid-axis,
+#weekCalendar .fc-timegrid-slot-label {
+  background: rgba(13, 21, 30, .55);
+}
+
+#weekCalendar .fc-timegrid-slot-label-cushion {
+  padding: 0 5px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+#weekCalendar .fc-timegrid-slot {
+  min-height: var(--hour-slot-min-height);
+  border-color: var(--grid-line-soft) !important;
+}
+
+#weekCalendar .fc-timegrid-slot-minor {
+  border-top-style: dotted;
+}
+
+#weekCalendar .fc-timegrid-col.fc-day-today,
+#weekCalendar .fc-day-today {
+  background: var(--today-bg) !important;
+}
+
+#weekCalendar .fc-event {
+  border: 0 !important;
+  border-radius: var(--event-radius);
+  box-shadow: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+#weekCalendar .fc-event-main {
+  padding: 2px 3px;
+}
+
+#weekCalendar .fc-event-time {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+#weekCalendar .fc-event-title {
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+#weekCalendar .fc-timegrid-now-indicator-line {
+  border-width: 2px 0 0;
+}
+
+#weekCalendar .fc-timegrid-now-indicator-arrow {
+  border-width: 5px 0 5px 6px;
+}
+
+/* Hide scrollbars but preserve native touch/mouse scrolling. */
+#weekCalendar * {
+  scrollbar-width: none;
+}
+
+#weekCalendar *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
