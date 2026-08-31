@@ -1,0 +1,1263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Weather</title>
+  <style>
+    :root{
+      --bg:#0b1118;
+      --panel:#101923;
+      --panel2:#0d151e;
+      --border:var(--db-border, #263543);
+      --text:var(--db-text, #eef5fb);
+      --muted:var(--db-muted, #8fa3b5);
+      --soft:var(--db-soft, #c8d4de);
+
+      --good:#22c55e;
+      --moderate:#eab308;
+      --usg:#f97316;
+      --unhealthy:#ef4444;
+      --very:#a855f7;
+      --hazard:#991b1b;
+
+      --rain:#60a5fa;
+      --hot:#fb923c;
+      --wind:#c084fc;
+    }
+
+    *{box-sizing:border-box}
+
+    html,body{
+      margin:0;
+      width:100%;
+      min-height:100%;
+      background:transparent;
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+    }
+
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar{
+      display:none;
+      width:0;
+      height:0;
+    }
+
+    body{padding:6px}
+
+    .panel{
+      width:100%;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:6px 9px;
+      border-bottom:1px solid var(--border);
+      background:var(--db-toolbar-bg, rgba(10,17,24,.40));
+    }
+
+    .title{
+      font-size:10px;
+      line-height:1;
+      font-weight:850;
+      letter-spacing:.11em;
+      color:var(--soft);
+    }
+
+    .status{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:9px;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+
+    .dot{
+      width:6px;
+      height:6px;
+      border-radius:999px;
+      background:var(--good);
+    }
+    .dot.loading{background:var(--moderate)}
+    .dot.error{background:var(--unhealthy)}
+
+    .alert{
+      display:none;
+      padding:9px 11px;
+      border-bottom:1px solid rgba(239,68,68,.45);
+      background:rgba(127,29,29,.32);
+      color:#fee2e2;
+    }
+    .alert.show{display:block}
+    .alert-title{
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .alert-detail{
+      margin-top:3px;
+      font-size:10px;
+      line-height:1.3;
+      color:#fecaca;
+    }
+
+    .hero{
+      display:grid;
+      grid-template-columns:minmax(160px,1.15fr) minmax(260px,2fr);
+      gap:1px;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+      border-bottom:1px solid var(--border);
+    }
+
+    .current{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+      padding:7px 7px;
+      background:var(--db-tile-strong, rgba(16,25,35,.70));
+    }
+
+    .wx-icon{
+      flex:0 0 auto;
+      width:50px;
+      text-align:center;
+      font-size:36px;
+      line-height:1;
+    }
+
+    .temp-wrap{min-width:0}
+    .temp{
+      font-size:39px;
+      line-height:.92;
+      font-weight:850;
+      letter-spacing:-.045em;
+    }
+    .condition{
+      margin-top:5px;
+      font-size:11px;
+      font-weight:750;
+      color:var(--soft);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .feels{
+      margin-top:1px;
+      font-size:9px;
+      color:var(--muted);
+    }
+    .today-summary{
+      margin-top:6px;
+      padding-top:5px;
+      border-top:1px solid rgba(143,163,181,.20);
+      font-size:9px;
+      line-height:1.25;
+      font-weight:750;
+      color:var(--soft);
+      white-space:nowrap;
+    }
+
+    .summary{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(68px,1fr));
+      gap:1px;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+    }
+
+    .metric{
+      min-width:0;
+      padding:7px 7px;
+      background:var(--db-tile-bg, rgba(13,21,30,.70));
+    }
+    .metric-label{
+      margin-bottom:4px;
+      color:var(--muted);
+      font-size:9.6px;
+      font-weight:850;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+    }
+    .metric-value{
+      font-size:13px;
+      line-height:1.15;
+      font-weight:800;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .metric-sub{
+      margin-top:3px;
+      color:var(--muted);
+      font-size:9.6px;
+      line-height:1.2;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .aqi-pill{
+      display:inline-block;
+      min-width:48px;
+      padding:4px 6px;
+      border-radius:6px;
+      color:#fff;
+      text-align:center;
+      font-size:12px;
+      font-weight:900;
+      line-height:1;
+      background:#64748b;
+    }
+    .aq-good{background:var(--good)}
+    .aq-moderate{background:#b89d00;color:#101010}
+    .aq-usg{background:var(--usg)}
+    .aq-unhealthy{background:var(--unhealthy)}
+    .aq-very{background:var(--very)}
+    .aq-hazard{background:var(--hazard)}
+
+    .focus{
+      display:none;
+      margin:9px 11px 0;
+      padding:7px 9px;
+      border:1px solid var(--border);
+      border-radius:7px;
+      background:rgba(11,21,31,.70);
+      font-size:10px;
+      font-weight:750;
+      color:var(--soft);
+    }
+    .focus.show{display:block}
+    .focus.rain{border-color:rgba(96,165,250,.45)}
+    .focus.wind{border-color:rgba(192,132,252,.45)}
+    .focus.heat{border-color:rgba(251,146,60,.45)}
+
+    .section{
+      padding:4px 9px 6px;
+    }
+    .section + .section{
+      border-top:1px solid var(--border);
+    }
+
+    .section-title{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:3px;
+      color:var(--muted);
+      font-size:9.6px;
+      font-weight:900;
+      letter-spacing:.11em;
+      text-transform:uppercase;
+    }
+    .section-title .secondary{
+      font-size:9.6px;
+      font-weight:600;
+      letter-spacing:0;
+      text-transform:none;
+    }
+
+    .hourly{
+      display:grid;
+      grid-template-columns:repeat(8,minmax(62px,1fr));
+      border:1px solid var(--border);
+      border-radius:8px;
+      overflow:hidden;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+      gap:1px;
+    }
+
+    .hour{
+      min-width:0;
+      padding:4px 4px 3px;
+      text-align:center;
+      background:var(--db-tile-bg, rgba(13,21,30,.70));
+    }
+    .hour-time{
+      color:var(--muted);
+      font-size:9.6px;
+      font-weight:800;
+    }
+    .hour-icon{
+      margin:1px 0 1px;
+      font-size:18px;
+      line-height:1;
+    }
+    .hour-temp{
+      font-size:12px;
+      font-weight:850;
+    }
+    .hour-pop{
+      margin-top:1px;
+      font-size:9px;
+      color:#93c5fd;
+      font-weight:750;
+    }
+    .rain-track{
+      height:11px;
+      margin:3px auto 0;
+      width:8px;
+      display:flex;
+      align-items:flex-end;
+      border-radius:2px;
+      overflow:hidden;
+      background:rgba(96,165,250,.08);
+    }
+    .rain-bar{
+      width:100%;
+      min-height:1px;
+      background:var(--rain);
+      border-radius:2px 2px 0 0;
+    }
+
+    .daily{
+      display:grid;
+      grid-template-columns:repeat(7,minmax(72px,1fr));
+      gap:5px;
+    }
+    .day{
+      min-width:0;
+      padding:4px 4px;
+      border:1px solid var(--border);
+      border-radius:7px;
+      background:var(--db-tile-bg, rgba(13,21,30,.70));
+      text-align:center;
+    }
+    .day-name{
+      font-size:9.6px;
+      font-weight:900;
+      color:var(--soft);
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+    .day-icon{
+      margin:1px 0 1px;
+      font-size:19px;
+      line-height:1;
+    }
+    .day-temps{
+      font-size:11px;
+      font-weight:850;
+    }
+    .low{color:var(--muted);font-weight:700}
+    .day-pop{
+      margin-top:1px;
+      color:#93c5fd;
+      font-size:9.6px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .footer{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:4px 9px 5px;
+      border-top:1px solid var(--border);
+      color:#607386;
+      font-size:8.4px;
+      line-height:1.25;
+    }
+
+    .errorbox{
+      display:none;
+      margin:9px 11px 11px;
+      padding:7px 7px;
+      border:1px solid rgba(239,68,68,.5);
+      border-radius:7px;
+      background:rgba(239,68,68,.08);
+      color:#fecaca;
+      font-size:10px;
+      line-height:1.35;
+    }
+    .errorbox.show{display:block}
+
+    /* Compact DAKboard layout:
+       preserve horizontal density instead of stacking vertically. */
+    @media(max-width:720px){
+      body{padding:4px}
+
+      .topbar{
+        padding:5px 8px;
+      }
+
+
+      .hero{
+        grid-template-columns:minmax(125px,.82fr) minmax(0,2.18fr);
+      }
+
+      .current{
+        gap:7px;
+        padding:7px 7px;
+      }
+
+      .wx-icon{
+        width:38px;
+        font-size:29px;
+      }
+
+      .temp{
+        font-size:34px;
+      }
+
+      .condition{
+        margin-top:3px;
+      }
+
+      .today-summary{
+        margin-top:1px;
+        padding-top:4px;
+        white-space:normal;
+      }
+
+      .summary{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+      }
+
+      .metric{
+        padding:5px 5px;
+      }
+
+      .metric-label{
+        margin-bottom:3px;
+        letter-spacing:.06em;
+      }
+
+      .metric-value{
+        font-size:12px;
+      }
+
+      .metric-sub{
+        margin-top:1px;
+        font-size:9px;
+      }
+
+      .section{
+        padding:3px 7px 5px;
+      }
+
+      .section-title{
+        margin-bottom:3px;
+      }
+
+      /* Keep all eight 3-hour forecast points on one line. */
+      .hourly{
+        grid-template-columns:repeat(8,minmax(0,1fr));
+      }
+
+      .hour{
+        padding:4px 2px 3px;
+      }
+
+      .hour-time{
+        font-size:9px;
+      }
+
+      .hour-icon{
+        margin:1px 0 0;
+        font-size:15px;
+      }
+
+      .hour-temp{
+        font-size:11px;
+      }
+
+      .hour-pop{
+        margin-top:1px;
+        font-size:8.4px;
+        line-height:1.08;
+        white-space:normal;
+      }
+
+      .rain-track{
+        height:8px;
+        margin-top:1px;
+        width:6px;
+      }
+
+      /* Keep the whole week on one row too. */
+      .daily{
+        grid-template-columns:repeat(7,minmax(0,1fr));
+        gap:3px;
+      }
+
+      .day{
+        padding:4px 2px;
+      }
+
+      .day-name{
+        font-size:9px;
+      }
+
+      .day-icon{
+        margin:1px 0;
+        font-size:16px;
+      }
+
+      .day-temps{
+        font-size:10px;
+      }
+
+      .day-pop{
+        margin-top:1px;
+        font-size:8.4px;
+        line-height:1.08;
+      }
+
+      .focus{
+        margin:4px 7px 0;
+        padding:4px 6px;
+      }
+
+      .footer{
+        display:none;
+      }
+    }
+
+    @media(max-width:460px){
+      .hero{
+        grid-template-columns:minmax(112px,.78fr) minmax(0,2.22fr);
+      }
+
+      .current{
+        padding:5px;
+        gap:5px;
+      }
+
+      .wx-icon{
+        width:31px;
+        font-size:25px;
+      }
+
+      .temp{
+        font-size:30px;
+      }
+
+      .condition{
+        font-size:10px;
+      }
+
+      .feels,
+      .today-summary{
+        font-size:9.6px;
+      }
+
+      .metric{
+        padding:4px 3px;
+      }
+
+      .metric-label{
+        font-size:8.4px;
+      }
+
+      .metric-value{
+        font-size:10.5px;
+      }
+
+      .metric-sub{
+        font-size:8.16px;
+      }
+
+      .aqi-pill{
+        min-width:37px;
+        padding:3px 4px;
+        font-size:10px;
+      }
+
+      .section{
+        padding:3px 6px 5px;
+      }
+
+      .section-title .secondary{
+        display:none;
+      }
+
+
+      .status{
+        font-size:9.6px;
+      }
+
+      .hour{
+        padding-left:1px;
+        padding-right:1px;
+      }
+
+      .hour-icon{
+        font-size:14px;
+      }
+
+      .day{
+        padding-left:1px;
+        padding-right:1px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="../shared/dashboard-theme.css">
+</head>
+
+<body>
+  <main class="panel">
+    <header class="topbar">
+      <div class="title">LOCAL WEATHER</div>
+      <div class="status">
+        <span id="statusDot" class="dot loading"></span>
+        <span id="updateText">Loading…</span>
+      </div>
+    </header>
+
+    <div id="alertBanner" class="alert">
+      <div id="alertTitle" class="alert-title"></div>
+      <div id="alertDetail" class="alert-detail"></div>
+    </div>
+
+    <section class="hero">
+      <div class="current">
+        <div id="currentIcon" class="wx-icon">☁️</div>
+        <div class="temp-wrap">
+          <div id="currentTemp" class="temp">—°</div>
+          <div id="currentCondition" class="condition">Loading weather…</div>
+          <div id="feelsLike" class="feels">Feels like —°</div>
+          <div id="todaySummary" class="today-summary">Today — / — · Rain —</div>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="metric">
+          <div class="metric-label">Air Quality</div>
+          <div id="aqiValue" class="metric-value"><span class="aqi-pill">—</span></div>
+          <div id="aqiSub" class="metric-sub">PM2.5 —</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Wind</div>
+          <div id="windValue" class="metric-value">—</div>
+          <div id="windSub" class="metric-sub">Gust —</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Humidity</div>
+          <div id="humidityValue" class="metric-value">—</div>
+          <div id="humiditySub" class="metric-sub">UV —</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Sunset</div>
+          <div id="sunsetValue" class="metric-value">—</div>
+          <div id="sunriseSub" class="metric-sub">Sunrise —</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Pressure</div>
+          <div id="pressureValue" class="metric-value">—</div>
+          <div class="metric-sub">Sea level</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Rain Now</div>
+          <div id="rainNowValue" class="metric-value">—</div>
+          <div id="rainNowSub" class="metric-sub">This hour</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Clouds</div>
+          <div id="cloudValue" class="metric-value">—</div>
+          <div class="metric-sub">Current cover</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Moon</div>
+          <div id="moonValue" class="metric-value">🌙 —</div>
+          <div id="moonSub" class="metric-sub">—</div>
+        </div>
+      </div>
+    </section>
+
+    <div id="focusMessage" class="focus"></div>
+
+    <section class="section">
+      <div class="section-title">
+        <span>Next 24 Hours</span>
+        <span class="secondary">3-hour intervals · temperature + rain</span>
+      </div>
+      <div id="hourlyGrid" class="hourly"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <span>7-Day Forecast</span>
+        <span id="locationLabel" class="secondary">Bonney Lake · 98391</span>
+      </div>
+      <div id="dailyGrid" class="daily"></div>
+    </section>
+
+    <div id="errorBox" class="errorbox"></div>
+
+    <footer class="footer">
+      <span>Weather: Open-Meteo · Alerts: U.S. National Weather Service</span>
+      <span>Air quality: CAMS via Open-Meteo</span>
+    </footer>
+  </main>
+
+<script>
+(() => {
+  "use strict";
+
+  // ============================================================
+  // LOCATION — Bonney Lake, WA 98391 (city-center point).
+  // Change these values if you want to pin the widget to a more exact location.
+  // ============================================================
+  const LATITUDE = 47.1770457;
+  const LONGITUDE = -122.1865056;
+  const LOCATION_LABEL = "Bonney Lake · 98391";
+  const TIMEZONE = "America/Los_Angeles";
+  const REFRESH_MINUTES = 10;
+
+  const $ = (id) => document.getElementById(id);
+
+  const statusDot = $("statusDot");
+  const updateText = $("updateText");
+  const errorBox = $("errorBox");
+
+  const weatherUrl = new URL("https://api.open-meteo.com/v1/forecast");
+  weatherUrl.search = new URLSearchParams({
+    latitude: LATITUDE,
+    longitude: LONGITUDE,
+    timezone: TIMEZONE,
+    temperature_unit: "fahrenheit",
+    wind_speed_unit: "mph",
+    precipitation_unit: "inch",
+    forecast_days: "7",
+    current: [
+      "temperature_2m",
+      "apparent_temperature",
+      "relative_humidity_2m",
+      "precipitation",
+      "rain",
+      "showers",
+      "snowfall",
+      "weather_code",
+      "cloud_cover",
+      "pressure_msl",
+      "wind_speed_10m",
+      "wind_direction_10m",
+      "wind_gusts_10m"
+    ].join(","),
+    hourly: [
+      "temperature_2m",
+      "precipitation_probability",
+      "precipitation",
+      "weather_code",
+      "wind_speed_10m",
+      "wind_gusts_10m"
+    ].join(","),
+    daily: [
+      "weather_code",
+      "temperature_2m_max",
+      "temperature_2m_min",
+      "precipitation_probability_max",
+      "precipitation_sum",
+      "sunrise",
+      "sunset",
+      "uv_index_max",
+      "wind_speed_10m_max",
+      "wind_gusts_10m_max"
+    ].join(",")
+  }).toString();
+
+  const airUrl = new URL("https://air-quality-api.open-meteo.com/v1/air-quality");
+  airUrl.search = new URLSearchParams({
+    latitude: LATITUDE,
+    longitude: LONGITUDE,
+    timezone: TIMEZONE,
+    current: "us_aqi,pm2_5,pm10,ozone"
+  }).toString();
+
+  const alertUrl =
+    `https://api.weather.gov/alerts/active?point=${encodeURIComponent(LATITUDE + "," + LONGITUDE)}`;
+
+  function showError(message) {
+    statusDot.className = "dot error";
+    updateText.textContent = "Weather unavailable";
+    errorBox.textContent = message;
+    errorBox.classList.add("show");
+  }
+
+  function clearError() {
+    errorBox.classList.remove("show");
+    errorBox.textContent = "";
+  }
+
+  async function getJson(url, options = {}) {
+    const host = new URL(url).hostname;
+    let response;
+
+    try {
+      response = await fetch(url, {
+        cache: "no-store",
+        ...options
+      });
+    } catch (err) {
+      throw new Error(`${host}: ${err?.message || "Failed to fetch"}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} from ${host}`);
+    }
+
+    return response.json();
+  }
+
+  function round(value) {
+    return Number.isFinite(value) ? Math.round(value) : null;
+  }
+
+  function fmtTemp(value) {
+    const v = round(value);
+    return v == null ? "—" : `${v}°`;
+  }
+
+  function fmtPercent(value) {
+    const v = round(value);
+    return v == null ? "—" : `${v}%`;
+  }
+
+  function fmtInches(value) {
+    if (!Number.isFinite(value)) return "—";
+    if (value === 0) return "0 in";
+    if (value < 0.01) return "<0.01 in";
+    return `${value.toFixed(2)} in`;
+  }
+
+  function fmtClock(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "2-digit"
+    }).format(d);
+  }
+
+  function fmtHour(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return new Intl.DateTimeFormat("en-US", {hour:"numeric"}).format(d);
+  }
+
+  function dayName(iso, index) {
+    if (index === 0) return "Today";
+    const d = new Date(`${iso}T12:00:00`);
+    return new Intl.DateTimeFormat("en-US", {weekday:"short"}).format(d);
+  }
+
+  function windDir(degrees) {
+    if (!Number.isFinite(degrees)) return "";
+    const dirs = ["N","NE","E","SE","S","SW","W","NW"];
+    return dirs[Math.round(degrees / 45) % 8];
+  }
+
+  function weatherInfo(code, isDay = true) {
+    const map = {
+      0: ["Clear", isDay ? "☀️" : "🌙"],
+      1: ["Mostly clear", isDay ? "🌤️" : "🌙☁️"],
+      2: ["Partly cloudy", isDay ? "⛅" : "🌙☁️"],
+      3: ["Overcast", "☁️"],
+      45:["Fog", "🌫️"],
+      48:["Rime fog", "🌫️"],
+      51:["Light drizzle", "🌦️"],
+      53:["Drizzle", "🌦️"],
+      55:["Heavy drizzle", "🌧️"],
+      56:["Freezing drizzle", "🌧️"],
+      57:["Heavy freezing drizzle", "🌧️"],
+      61:["Light rain", "🌦️"],
+      63:["Rain", "🌧️"],
+      65:["Heavy rain", "🌧️"],
+      66:["Freezing rain", "🌧️"],
+      67:["Heavy freezing rain", "🌧️"],
+      71:["Light snow", "🌨️"],
+      73:["Snow", "❄️"],
+      75:["Heavy snow", "❄️"],
+      77:["Snow grains", "❄️"],
+      80:["Rain showers", "🌦️"],
+      81:["Rain showers", "🌧️"],
+      82:["Heavy showers", "⛈️"],
+      85:["Snow showers", "🌨️"],
+      86:["Heavy snow showers", "❄️"],
+      95:["Thunderstorm", "⛈️"],
+      96:["Thunderstorm / hail", "⛈️"],
+      99:["Strong thunderstorm / hail", "⛈️"]
+    };
+    return map[code] || ["Weather", "🌡️"];
+  }
+
+  function aqiInfo(aqi) {
+    if (!Number.isFinite(aqi)) return {label:"Unavailable", cls:"", value:"—"};
+    if (aqi <= 50) return {label:"Good", cls:"aq-good", value:Math.round(aqi)};
+    if (aqi <= 100) return {label:"Moderate", cls:"aq-moderate", value:Math.round(aqi)};
+    if (aqi <= 150) return {label:"Sensitive", cls:"aq-usg", value:Math.round(aqi)};
+    if (aqi <= 200) return {label:"Unhealthy", cls:"aq-unhealthy", value:Math.round(aqi)};
+    if (aqi <= 300) return {label:"Very unhealthy", cls:"aq-very", value:Math.round(aqi)};
+    return {label:"Hazardous", cls:"aq-hazard", value:Math.round(aqi)};
+  }
+
+  function isDaylightAt(iso, daily) {
+    if (!iso || !daily?.time?.length) return true;
+    const target = new Date(iso);
+    if (Number.isNaN(target.getTime())) return true;
+
+    const localDate = iso.slice(0, 10);
+    let dayIndex = daily.time.indexOf(localDate);
+
+    if (dayIndex < 0) {
+      // Fall back to nearest available daily date.
+      dayIndex = daily.time.findIndex(d => d >= localDate);
+      if (dayIndex < 0) dayIndex = daily.time.length - 1;
+    }
+
+    const rise = daily.sunrise?.[dayIndex] ? new Date(daily.sunrise[dayIndex]) : null;
+    const set = daily.sunset?.[dayIndex] ? new Date(daily.sunset[dayIndex]) : null;
+
+    if (!rise || !set || Number.isNaN(rise.getTime()) || Number.isNaN(set.getTime())) {
+      return true;
+    }
+
+    return target >= rise && target < set;
+  }
+
+  function moonPhaseInfo(date = new Date()) {
+    // Approximate lunar phase from a well-known new-moon epoch.
+    // Good for dashboard display; not intended for navigation/astronomy work.
+    const synodicMonth = 29.53058867;
+    const epoch = Date.UTC(2000, 0, 6, 18, 14, 0);
+    const days = (date.getTime() - epoch) / 86400000;
+    let age = ((days % synodicMonth) + synodicMonth) % synodicMonth;
+    const fraction = age / synodicMonth;
+    const illumination = Math.round((1 - Math.cos(2 * Math.PI * fraction)) * 50);
+
+    let name, icon;
+    if (fraction < 0.0625 || fraction >= 0.9375) {
+      name = "New Moon"; icon = "🌑";
+    } else if (fraction < 0.1875) {
+      name = "Waxing Crescent"; icon = "🌒";
+    } else if (fraction < 0.3125) {
+      name = "First Quarter"; icon = "🌓";
+    } else if (fraction < 0.4375) {
+      name = "Waxing Gibbous"; icon = "🌔";
+    } else if (fraction < 0.5625) {
+      name = "Full Moon"; icon = "🌕";
+    } else if (fraction < 0.6875) {
+      name = "Waning Gibbous"; icon = "🌖";
+    } else if (fraction < 0.8125) {
+      name = "Last Quarter"; icon = "🌗";
+    } else {
+      name = "Waning Crescent"; icon = "🌘";
+    }
+
+    return {name, icon, illumination};
+  }
+
+  function renderMoonPhase() {
+    const moon = moonPhaseInfo(new Date());
+    const trend = moon.name.includes("Waxing")
+      ? "Waxing"
+      : moon.name.includes("Waning")
+        ? "Waning"
+        : moon.name.includes("Full")
+          ? "Full"
+          : "New";
+
+    $("moonValue").textContent = moon.icon;
+    $("moonSub").textContent = `${trend} · ${moon.illumination}%`;
+  }
+
+  function findHourlyStart(hourly) {
+    if (!hourly?.time?.length) return 0;
+    const now = Date.now();
+    let best = 0;
+    let bestDiff = Infinity;
+    hourly.time.forEach((t, i) => {
+      const ms = new Date(t).getTime();
+      const diff = ms - now;
+      if (diff >= -30 * 60 * 1000 && diff < bestDiff) {
+        best = i;
+        bestDiff = diff;
+      }
+    });
+    return best;
+  }
+
+  function renderHourly(hourly, daily) {
+    const grid = $("hourlyGrid");
+    grid.innerHTML = "";
+
+    const start = findHourlyStart(hourly);
+    const offsets = [0, 3, 6, 9, 12, 15, 18, 21];
+
+    offsets.forEach((offset, j) => {
+      const i = start + offset;
+      if (i >= (hourly.time?.length || 0)) return;
+
+      const pop = Number.isFinite(hourly.precipitation_probability?.[i])
+        ? hourly.precipitation_probability[i]
+        : 0;
+      const amount = Number.isFinite(hourly.precipitation?.[i])
+        ? hourly.precipitation[i]
+        : 0;
+      const isDay = isDaylightAt(hourly.time[i], daily);
+      const info = weatherInfo(hourly.weather_code?.[i], isDay);
+
+      const card = document.createElement("div");
+      card.className = "hour";
+      card.innerHTML = `
+        <div class="hour-time">${j === 0 ? "Now" : fmtHour(hourly.time[i])}</div>
+        <div class="hour-icon">${info[1]}</div>
+        <div class="hour-temp">${fmtTemp(hourly.temperature_2m?.[i])}</div>
+        <div class="hour-pop">${Math.round(pop)}%<br>${fmtInches(amount)}</div>
+        <div class="rain-track" aria-label="${Math.round(pop)} percent precipitation probability">
+          <div class="rain-bar" style="height:${Math.max(1, Math.min(100, pop))}%"></div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderDaily(daily) {
+    const grid = $("dailyGrid");
+    grid.innerHTML = "";
+
+    const count = Math.min(7, daily.time?.length || 0);
+    for (let i = 0; i < count; i++) {
+      const info = weatherInfo(daily.weather_code?.[i]);
+      const pop = round(daily.precipitation_probability_max?.[i]);
+
+      const card = document.createElement("div");
+      card.className = "day";
+      card.innerHTML = `
+        <div class="day-name">${dayName(daily.time[i], i)}</div>
+        <div class="day-icon">${info[1]}</div>
+        <div class="day-temps">
+          ${fmtTemp(daily.temperature_2m_max?.[i])}
+          <span class="low">${fmtTemp(daily.temperature_2m_min?.[i])}</span>
+        </div>
+        <div class="day-pop">${pop == null ? "—" : pop + "%"} · ${fmtInches(daily.precipitation_sum?.[i])}</div>
+      `;
+      grid.appendChild(card);
+    }
+  }
+
+  function renderFocus(weather) {
+    const box = $("focusMessage");
+    box.className = "focus";
+    box.textContent = "";
+
+    const daily = weather.daily || {};
+    const current = weather.current || {};
+    const maxPop = round(daily.precipitation_probability_max?.[0]) || 0;
+    const gust = round(daily.wind_gusts_10m_max?.[0]) || 0;
+    const high = round(daily.temperature_2m_max?.[0]);
+
+    if (maxPop >= 55) {
+      box.textContent = `Rain is likely today — peak probability ${maxPop}%.`;
+      box.className = "focus show rain";
+    } else if (gust >= 30) {
+      box.textContent = `Gusty today — winds may reach about ${gust} mph.`;
+      box.className = "focus show wind";
+    } else if (high != null && high >= 90) {
+      box.textContent = `Hot today — forecast high ${high}°.`;
+      box.className = "focus show heat";
+    } else if (Number.isFinite(current.wind_gusts_10m) && current.wind_gusts_10m >= 25) {
+      box.textContent = `Currently breezy — gusting around ${round(current.wind_gusts_10m)} mph.`;
+      box.className = "focus show wind";
+    }
+  }
+
+  function renderWeather(weather) {
+    const c = weather.current || {};
+    const d = weather.daily || {};
+
+    const isDay = (() => {
+      if (!d.sunrise?.[0] || !d.sunset?.[0]) return true;
+      const now = Date.now();
+      return now >= new Date(d.sunrise[0]).getTime() && now <= new Date(d.sunset[0]).getTime();
+    })();
+
+    const info = weatherInfo(c.weather_code, isDay);
+
+    $("currentIcon").textContent = info[1];
+    $("currentTemp").textContent = fmtTemp(c.temperature_2m);
+    $("currentCondition").textContent = info[0];
+    $("feelsLike").textContent = `Feels like ${fmtTemp(c.apparent_temperature)}`;
+
+    const todayPop = fmtPercent(d.precipitation_probability_max?.[0]);
+    const todayRainAmount = fmtInches(d.precipitation_sum?.[0]);
+    $("todaySummary").textContent =
+      `Today ${fmtTemp(d.temperature_2m_max?.[0])} / ${fmtTemp(d.temperature_2m_min?.[0])} · Rain ${todayPop} · ${todayRainAmount}`;
+
+    const dir = windDir(c.wind_direction_10m);
+    $("windValue").textContent =
+      Number.isFinite(c.wind_speed_10m)
+        ? `${dir ? dir + " " : ""}${round(c.wind_speed_10m)} mph`
+        : "—";
+    $("windSub").textContent =
+      Number.isFinite(c.wind_gusts_10m)
+        ? `Gust ${round(c.wind_gusts_10m)} mph`
+        : "Gust —";
+
+    $("humidityValue").textContent = fmtPercent(c.relative_humidity_2m);
+    $("humiditySub").textContent =
+      Number.isFinite(d.uv_index_max?.[0])
+        ? `UV max ${Math.round(d.uv_index_max[0])}`
+        : "UV —";
+
+    $("sunsetValue").textContent = fmtClock(d.sunset?.[0]);
+    $("sunriseSub").textContent = `Sunrise ${fmtClock(d.sunrise?.[0])}`;
+
+    $("pressureValue").textContent =
+      Number.isFinite(c.pressure_msl)
+        ? `${(c.pressure_msl * 0.0295299830714).toFixed(2)} inHg`
+        : "—";
+
+    $("rainNowValue").textContent = fmtInches(c.precipitation);
+    $("rainNowSub").textContent =
+      Number.isFinite(c.rain) && c.rain > 0 ? `Rain ${fmtInches(c.rain)}` : "This hour";
+
+    $("cloudValue").textContent = fmtPercent(c.cloud_cover);
+
+    renderHourly(weather.hourly || {}, d);
+    renderDaily(d);
+    renderFocus(weather);
+  }
+
+  function renderAirUnavailable() {
+    $("aqiValue").innerHTML = `<span class="aqi-pill">—</span> Unavailable`;
+    $("aqiSub").textContent = "AQI service unavailable";
+  }
+
+  function renderAir(air) {
+    const c = air.current || {};
+    const info = aqiInfo(c.us_aqi);
+
+    $("aqiValue").innerHTML =
+      `<span class="aqi-pill ${info.cls}">${info.value}</span> ${info.label}`;
+    $("aqiSub").textContent =
+      Number.isFinite(c.pm2_5)
+        ? `PM2.5 ${Math.round(c.pm2_5)} µg/m³`
+        : "PM2.5 —";
+  }
+
+  function alertRank(severity) {
+    return {
+      Extreme: 5,
+      Severe: 4,
+      Moderate: 3,
+      Minor: 2,
+      Unknown: 1
+    }[severity] || 0;
+  }
+
+  function renderAlerts(alerts) {
+    const banner = $("alertBanner");
+    banner.classList.remove("show");
+
+    const features = Array.isArray(alerts?.features) ? alerts.features : [];
+    if (!features.length) return;
+
+    features.sort((a,b) =>
+      alertRank(b?.properties?.severity) - alertRank(a?.properties?.severity)
+    );
+
+    const p = features[0]?.properties || {};
+    $("alertTitle").textContent = p.event || "Weather Alert";
+
+    const until = p.ends ? ` · until ${fmtClock(p.ends)}` : "";
+    const headline = p.headline || p.description || "";
+    $("alertDetail").textContent =
+      `${headline}${until}`.replace(/\s+/g, " ").trim();
+
+    banner.classList.add("show");
+  }
+
+  async function load() {
+    renderMoonPhase();
+    clearError();
+    statusDot.className = "dot loading";
+    updateText.textContent = "Updating…";
+    $("locationLabel").textContent = LOCATION_LABEL;
+
+    try {
+      // NWS alerts are allowed to fail independently so the weather panel
+      // remains useful even if api.weather.gov is temporarily unavailable.
+      const [weatherResult, airResult, alertsResult] = await Promise.allSettled([
+        getJson(weatherUrl.toString()),
+        getJson(airUrl.toString()),
+        getJson(alertUrl, {
+          headers: {"Accept":"application/geo+json"}
+        })
+      ]);
+
+      // The main weather forecast is the only required service.
+      // AQI and NWS alerts fail independently so a secondary API outage
+      // cannot blank the entire DAKboard widget.
+      if (weatherResult.status !== "fulfilled") {
+        const reason = weatherResult.reason;
+        throw new Error(
+          `Weather API failed: ${reason?.message || "network request failed"}`
+        );
+      }
+
+      renderWeather(weatherResult.value);
+
+      if (airResult.status === "fulfilled") {
+        renderAir(airResult.value);
+      } else {
+        console.warn("Air-quality request failed:", airResult.reason);
+        renderAirUnavailable();
+      }
+
+      if (alertsResult.status === "fulfilled") {
+        renderAlerts(alertsResult.value);
+      } else {
+        console.warn("NWS alert request failed:", alertsResult.reason);
+        $("alertBanner").classList.remove("show");
+      }
+
+      statusDot.className = "dot";
+
+      const secondaryIssues = [];
+      if (airResult.status !== "fulfilled") secondaryIssues.push("AQI");
+      if (alertsResult.status !== "fulfilled") secondaryIssues.push("alerts");
+
+      const updated = new Date().toLocaleTimeString([], {
+        hour:"numeric",
+        minute:"2-digit"
+      });
+
+      updateText.textContent = secondaryIssues.length
+        ? `Updated ${updated} · ${secondaryIssues.join(" + ")} unavailable`
+        : `Updated ${updated}`;
+
+    } catch (err) {
+      console.error(err);
+      showError(err?.message || "Unable to load weather data.");
+    }
+  }
+
+  load();
+  window.setInterval(load, REFRESH_MINUTES * 60 * 1000);
+})();
+</script>
+</body>
+</html>

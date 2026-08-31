@@ -149,7 +149,7 @@ button {
   min-height: 28px;
   border: 1px solid rgba(143, 163, 181, .22);
   border-radius: 6px;
-  background: rgba(13, 21, 30, .70);
+  background: var(--tile-bg);
   color: var(--soft);
   cursor: pointer;
 }

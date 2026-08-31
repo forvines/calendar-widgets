@@ -1,0 +1,30 @@
+/*
+ * Shared visual tokens for all DAKboard widgets in this repository.
+ * Change these values first when you want to globally adjust transparency,
+ * border contrast, typography color, or corner radius.
+ */
+:root {
+  /* Background between tiles: 60% transparent / 40% opaque. */
+  --db-shell-bg: rgba(11, 17, 24, .40);
+  --db-toolbar-bg: rgba(10, 17, 24, .40);
+
+  /* Individual tiles: 30% transparent / 70% opaque. */
+  --db-tile-bg: rgba(13, 21, 30, .70);
+  --db-tile-strong: rgba(16, 25, 35, .76);
+
+  --db-border: #263543;
+  --db-grid-line: rgba(150, 170, 188, .20);
+  --db-grid-line-soft: rgba(150, 170, 188, .11);
+
+  --db-text: #eef5fb;
+  --db-soft: #c8d4de;
+  --db-muted: #8fa3b5;
+  --db-muted-2: #657a8d;
+
+  --db-today-bg: rgba(39, 78, 125, .42);
+  --db-now-line: #ef5350;
+
+  --db-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --db-corner: 10px;
+  --db-event-radius: 5px;
+}

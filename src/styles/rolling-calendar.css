@@ -19,7 +19,7 @@
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--border);
-  background: rgba(10, 17, 24, .93);
+  background: var(--toolbar-bg);
 }
 
 .rolling-weekdays > div {
@@ -42,7 +42,7 @@
   z-index: 7;
   padding: 5px 7px 4px;
   border-bottom: 1px solid var(--border);
-  background: rgba(16, 25, 35, .92);
+  background: var(--tile-bg);
   color: var(--soft);
   font-size: 10px;
   font-weight: 850;
@@ -61,7 +61,7 @@
   min-width: 0;
   padding: 4px 3px 5px;
   border-right: 1px solid var(--grid-line);
-  background: rgba(13, 21, 30, .70);
+  background: var(--tile-bg);
 }
 
 .rolling-day:last-child {

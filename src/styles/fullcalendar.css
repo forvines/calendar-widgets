@@ -1,5 +1,12 @@
-/* FullCalendar v7 presentation overrides. The phase-1 project intentionally
-   keeps these in their own file so calendar logic is independent of styling. */
+/*
+ * FullCalendar presentation overrides.
+ *
+ * Design goals:
+ * - match the weather / aviation widgets
+ * - retain Google Calendar-like hierarchy
+ * - keep the background photograph visible
+ * - make event colors the primary visual emphasis
+ */
 
 #weekCalendar .fc {
   height: 100%;
@@ -9,12 +16,30 @@
 
   --fc-border-color: var(--grid-line);
   --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: rgba(13, 21, 30, .35);
+  --fc-neutral-bg-color: transparent;
   --fc-neutral-text-color: var(--muted);
   --fc-today-bg-color: var(--today-bg);
   --fc-now-indicator-color: var(--now-line);
-  --fc-event-text-color: #081018;
   --fc-event-border-color: transparent;
+  --fc-event-text-color: var(--text);
+}
+
+/* Kill the light defaults from the FullCalendar base theme. */
+#weekCalendar .fc-theme-standard,
+#weekCalendar .fc-scrollgrid,
+#weekCalendar .fc-scrollgrid table,
+#weekCalendar .fc-scrollgrid-section,
+#weekCalendar .fc-scrollgrid-section > td,
+#weekCalendar .fc-timegrid,
+#weekCalendar .fc-timegrid-body,
+#weekCalendar .fc-timegrid-body table,
+#weekCalendar .fc-timegrid-slots,
+#weekCalendar .fc-timegrid-slots table,
+#weekCalendar .fc-timegrid-cols,
+#weekCalendar .fc-timegrid-cols table,
+#weekCalendar .fc-daygrid-body,
+#weekCalendar .fc-daygrid-body table {
+  background: transparent !important;
 }
 
 #weekCalendar table,
@@ -23,36 +48,84 @@
   border-color: var(--grid-line) !important;
 }
 
-#weekCalendar .fc-scrollgrid,
-#weekCalendar .fc-timegrid-body,
-#weekCalendar .fc-timegrid-slots,
-#weekCalendar .fc-timegrid-cols {
-  background: transparent;
+/* Each calendar surface is a 30%-transparent tile. */
+#weekCalendar .fc-col-header-cell,
+#weekCalendar .fc-timegrid-axis,
+#weekCalendar .fc-timegrid-slot-label,
+#weekCalendar .fc-timegrid-col,
+#weekCalendar .fc-daygrid-day,
+#weekCalendar .fc-daygrid-body-natural .fc-daygrid-day-events {
+  background: var(--tile-bg) !important;
 }
 
+/* Header: Google-like weekday + date hierarchy. */
 #weekCalendar .fc-col-header-cell {
-  background: rgba(16, 25, 35, .70);
+  border-bottom-color: var(--border) !important;
 }
 
 #weekCalendar .fc-col-header-cell-cushion {
-  padding: 5px 2px;
-  color: var(--soft);
-  font-size: 10px;
-  font-weight: 800;
+  display: block;
+  width: 100%;
+  padding: 4px 2px 5px;
+  color: inherit;
   text-decoration: none;
+}
+
+#weekCalendar .week-day-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 31px;
+}
+
+#weekCalendar .week-day-name {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
   text-transform: uppercase;
 }
 
+#weekCalendar .week-day-number {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 999px;
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+#weekCalendar .week-day-heading.is-today .week-day-name {
+  color: #a9c8f8;
+}
+
+#weekCalendar .week-day-heading.is-today .week-day-number {
+  background: #7baaf7;
+  color: #081018;
+}
+
+/* Time axis and grid. */
 #weekCalendar .fc-timegrid-axis,
 #weekCalendar .fc-timegrid-slot-label {
-  background: rgba(13, 21, 30, .55);
+  background: var(--tile-bg) !important;
+}
+
+#weekCalendar .fc-timegrid-axis-cushion,
+#weekCalendar .fc-timegrid-slot-label-cushion,
+#weekCalendar .fc-timegrid-axis-frame {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
 }
 
 #weekCalendar .fc-timegrid-slot-label-cushion {
   padding: 0 5px;
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 700;
 }
 
 #weekCalendar .fc-timegrid-slot {
@@ -69,35 +142,83 @@
   background: var(--today-bg) !important;
 }
 
+/* All-day row uses the same tile language without becoming a bright stripe. */
+#weekCalendar .fc-daygrid-body,
+#weekCalendar .fc-daygrid-day,
+#weekCalendar .fc-timegrid-divider,
+#weekCalendar .fc-scrollgrid-section-header > td,
+#weekCalendar .fc-scrollgrid-section-body > td {
+  background-color: transparent !important;
+}
+
+#weekCalendar .fc-daygrid-day-frame,
+#weekCalendar .fc-timegrid-col-frame {
+  background: var(--tile-bg);
+}
+
+#weekCalendar .fc-timegrid-divider {
+  padding: 0;
+  border-color: var(--border) !important;
+}
+
+#weekCalendar .fc-timegrid-axis-cushion.fc-scrollgrid-shrink-cushion {
+  padding-inline: 4px;
+}
+
+/* Events: Google-like solid calendar color, slightly translucent over the photo. */
 #weekCalendar .fc-event {
   border: 0 !important;
+  border-left: 3px solid var(--event-color, transparent) !important;
   border-radius: var(--event-radius);
-  box-shadow: none;
+  box-shadow: none !important;
   cursor: pointer;
   overflow: hidden;
 }
 
 #weekCalendar .fc-event-main {
-  padding: 2px 3px;
+  padding: 2px 4px;
+  color: inherit !important;
 }
 
 #weekCalendar .fc-event-time {
   font-size: 9px;
   font-weight: 800;
+  line-height: 1.1;
 }
 
 #weekCalendar .fc-event-title {
   font-size: 10px;
   font-weight: 750;
-  line-height: 1.15;
+  line-height: 1.14;
 }
 
+#weekCalendar .fc-daygrid-event {
+  margin: 1px 2px;
+}
+
+#weekCalendar .fc-daygrid-event .fc-event-main {
+  padding-block: 2px;
+}
+
+/* Current time is intentionally stronger than the grid. */
 #weekCalendar .fc-timegrid-now-indicator-line {
   border-width: 2px 0 0;
 }
 
 #weekCalendar .fc-timegrid-now-indicator-arrow {
   border-width: 5px 0 5px 6px;
+}
+
+/* Remove default focus/hover treatments that are visually noisy on DAKboard. */
+#weekCalendar a,
+#weekCalendar a:visited {
+  color: inherit;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #weekCalendar .fc-event:hover {
+    filter: brightness(1.06);
+  }
 }
 
 /* Hide scrollbars but preserve native touch/mouse scrolling. */

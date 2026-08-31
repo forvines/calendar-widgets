@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KPLU / KTCM Aviation Weather</title>
+  <style>
+    :root{
+      --bg:#0b1118;
+      --panel:#101923;
+      --panel2:#0d151e;
+      --border:var(--db-border, #263543);
+      --text:var(--db-text, #eef5fb);
+      --muted:var(--db-muted, #8fa3b5);
+      --soft:var(--db-soft, #c8d4de);
+      --vfr:#19c36a;
+      --mvfr:#2589ff;
+      --ifr:#ef4444;
+      --lifr:#d946ef;
+      --warn:#f59e0b;
+    }
+
+    *{box-sizing:border-box}
+
+    html,body{
+      margin:0;
+      width:100%;
+      min-height:100%;
+      background:transparent;
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+
+      /* Hide browser scrollbars while preserving scrolling if needed */
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+    }
+
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar{
+      display:none;
+      width:0;
+      height:0;
+    }
+
+    body{padding:6px}
+
+    .panel{
+      width:100%;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+    }
+
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:6px 9px;
+      border-bottom:1px solid var(--border);
+      background:var(--db-toolbar-bg, rgba(10,17,24,.40));
+    }
+
+    .title{
+      font-weight:800;
+      letter-spacing:.08em;
+      font-size:10px;
+      line-height:1;
+      color:var(--soft);
+    }
+
+    .status{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:9px;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+
+    .dot{
+      width:6px;
+      height:6px;
+      border-radius:999px;
+      background:var(--vfr);
+    }
+
+    .dot.loading{background:var(--warn)}
+    .dot.error{background:var(--ifr)}
+
+    .station-header{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 9px;
+      background:var(--db-tile-strong, rgba(16,25,35,.70));
+    }
+
+    .icao{
+      font-size:20px;
+      line-height:1;
+      font-weight:900;
+      letter-spacing:.04em;
+    }
+
+    .station-name{
+      min-width:0;
+      color:var(--muted);
+      font-size:10px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .badge{
+      margin-left:auto;
+      border-radius:7px;
+      padding:5px 8px 4px;
+      font-weight:900;
+      font-size:13px;
+      letter-spacing:.07em;
+      line-height:1;
+      color:white;
+      background:#5c6670;
+      min-width:66px;
+      text-align:center;
+    }
+
+    .badge.VFR{background:var(--vfr)}
+    .badge.MVFR{background:var(--mvfr)}
+    .badge.IFR{background:var(--ifr)}
+    .badge.LIFR{background:var(--lifr)}
+
+    .metrics{
+      display:grid;
+      grid-template-columns:repeat(6,minmax(90px,1fr));
+      gap:1px;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+    }
+
+    .metric{
+      min-width:0;
+      padding:7px;
+      background:var(--db-tile-bg, rgba(13,21,30,.70));
+    }
+
+    .metric-label{
+      color:var(--muted);
+      font-size:9.6px;
+      font-weight:850;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      margin-bottom:4px;
+    }
+
+    .metric-value{
+      font-size:13px;
+      line-height:1.15;
+      font-weight:800;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .metric-sub{
+      margin-top:3px;
+      font-size:9.6px;
+      line-height:1.2;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .section{
+      padding:5px 9px 7px;
+    }
+
+    .section + .section{
+      border-top:1px solid var(--border);
+    }
+
+    .section-title{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:8px;
+      margin-bottom:4px;
+      font-size:9.6px;
+      font-weight:850;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .section-title .time{
+      text-transform:none;
+      letter-spacing:0;
+      font-weight:600;
+      color:var(--muted);
+    }
+
+    .raw{
+      margin:0;
+      padding:7px 8px;
+      border:1px solid var(--border);
+      border-radius:8px;
+      background:var(--db-tile-bg, rgba(13,21,30,.70));
+      color:#e5edf5;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      font-size:11px;
+      line-height:1.35;
+      white-space:pre-wrap;
+      overflow-wrap:anywhere;
+    }
+
+    .taf-head{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 9px;
+      border-top:1px solid var(--border);
+      background:var(--db-tile-strong, rgba(16,25,35,.70));
+    }
+
+    .taf-meta{
+      color:var(--muted);
+      font-size:9.6px;
+      line-height:1.25;
+    }
+
+    .forecast-grid{
+      display:grid;
+      grid-template-columns:108px 74px 120px 100px 100px minmax(110px,1fr);
+      border:1px solid var(--border);
+      border-radius:9px;
+      overflow:hidden;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+      gap:1px;
+    }
+
+    .fh{
+      padding:5px 6px;
+      background:var(--db-toolbar-bg, rgba(10,17,24,.40));
+      color:var(--muted);
+      font-size:9px;
+      font-weight:850;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+    }
+
+    .fc{
+      min-width:0;
+      padding:6px;
+      background:var(--db-tile-bg, rgba(13,21,30,.70));
+      font-size:9.6px;
+      line-height:1.25;
+      display:flex;
+      align-items:center;
+    }
+
+    .fc.mono{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    }
+
+    .cat-pill{
+      display:inline-block;
+      min-width:48px;
+      padding:3px 6px;
+      border-radius:5px;
+      color:white;
+      text-align:center;
+      font-size:9.6px;
+      font-weight:900;
+      letter-spacing:.05em;
+      background:#5c6670;
+    }
+
+    .cat-pill.VFR{background:var(--vfr)}
+    .cat-pill.MVFR{background:var(--mvfr)}
+    .cat-pill.IFR{background:var(--ifr)}
+    .cat-pill.LIFR{background:var(--lifr)}
+
+    .change{
+      font-weight:900;
+      color:var(--soft);
+    }
+
+    .errorbox{
+      display:none;
+      margin:12px 14px 14px;
+      padding:12px;
+      border:1px solid rgba(239,68,68,.5);
+      background:rgba(127,29,29,.42);
+      border-radius:8px;
+      color:#fecaca;
+      font-size:10.4px;
+      line-height:1.4;
+    }
+
+    .errorbox.show{display:block}
+
+    @media(max-width:900px){
+      .metrics{grid-template-columns:repeat(3,1fr)}
+      .forecast-grid{grid-template-columns:94px 62px 105px 90px 90px minmax(100px,1fr)}
+    }
+
+    @media(max-width:650px){
+      body{padding:4px}
+      .topbar{padding:5px 8px}
+      .station-header,.taf-head{padding:6px 7px}
+      .section{padding:4px 7px 6px}
+      .metrics{grid-template-columns:repeat(2,1fr)}
+      .metric{padding:6px}
+      .icao{font-size:18px}
+      .badge{font-size:12px;min-width:62px}
+      .raw{font-size:10.5px}
+    }
+
+    /* Tall / narrow DAKboard windows:
+       switch the TAF timeline from a horizontal grid into stacked forecast cards. */
+    .forecast-row{
+      display:none;
+    }
+
+    @media(max-width:560px){
+      .wide-forecast-cell{
+        display:none !important;
+      }
+
+      .forecast-row{
+        display:block;
+      }
+
+      .forecast-wrap{
+        overflow:visible;
+      }
+
+      .forecast-grid{
+        display:block;
+        min-width:0;
+        border:0;
+        border-radius:0;
+        background:transparent;
+      }
+
+      .forecast-grid > .fh{
+        display:none;
+      }
+
+      .forecast-row{
+        display:block;
+        margin-bottom:6px;
+        border:1px solid var(--border);
+        border-radius:8px;
+        overflow:hidden;
+        background:var(--db-tile-bg, rgba(13,21,30,.70));
+      }
+
+      .forecast-row:last-child{
+        margin-bottom:0;
+      }
+
+      .forecast-cell{
+        display:grid;
+        grid-template-columns:70px minmax(0,1fr);
+        align-items:center;
+        min-width:0;
+        padding:5px 7px;
+        border-top:1px solid var(--border);
+        background:var(--db-tile-bg, rgba(13,21,30,.70));
+        font-size:9.6px;
+        line-height:1.3;
+      }
+
+      .forecast-cell:first-child{
+        border-top:0;
+      }
+
+      .forecast-cell::before{
+        content:attr(data-label);
+        color:var(--muted);
+        font-size:9px;
+        font-weight:850;
+        letter-spacing:.09em;
+        text-transform:uppercase;
+        padding-right:8px;
+      }
+
+      .forecast-period{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:8px;
+        padding:5px 7px;
+        background:var(--db-toolbar-bg, rgba(10,17,24,.40));
+        border-bottom:1px solid var(--border);
+      }
+
+      .forecast-period .period-text{
+        font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,
+          "Liberation Mono","Courier New",monospace;
+        font-size:9.6px;
+        font-weight:900;
+        color:var(--soft);
+      }
+
+      .forecast-period .cat-pill{
+        flex:0 0 auto;
+      }
+
+      .taf-head{
+        align-items:flex-start;
+      }
+
+      .taf-meta{
+        font-size:9.6px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="../shared/dashboard-theme.css">
+</head>
+
+<body>
+  <main class="panel">
+    <header class="topbar">
+      <div class="title">AVIATION WEATHER</div>
+      <div class="status">
+        <span id="statusDot" class="dot loading"></span>
+        <span id="updateText">Loading CheckWX…</span>
+      </div>
+    </header>
+
+    <section>
+      <div class="station-header">
+        <div class="icao">KPLU</div>
+        <div id="metarStation" class="station-name">Thun Field</div>
+        <div id="metarCategory" class="badge">—</div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Wind</div>
+          <div id="wind" class="metric-value">—</div>
+          <div id="windSub" class="metric-sub">&nbsp;</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Visibility</div>
+          <div id="visibility" class="metric-value">—</div>
+          <div id="visibilitySub" class="metric-sub">&nbsp;</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Ceiling</div>
+          <div id="ceiling" class="metric-value">—</div>
+          <div id="ceilingSub" class="metric-sub">&nbsp;</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Altimeter</div>
+          <div id="altimeter" class="metric-value">—</div>
+          <div id="altimeterSub" class="metric-sub">&nbsp;</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Temp / Dew</div>
+          <div id="tempDew" class="metric-value">—</div>
+          <div id="tempDewSub" class="metric-sub">&nbsp;</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Weather</div>
+          <div id="conditions" class="metric-value">—</div>
+          <div id="conditionsSub" class="metric-sub">&nbsp;</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span>Raw METAR</span>
+          <span id="metarTime" class="time"></span>
+        </div>
+        <pre id="rawMetar" class="raw">Loading KPLU METAR…</pre>
+      </div>
+    </section>
+
+    <section>
+      <div class="taf-head">
+        <div class="icao">KTCM</div>
+        <div>
+          <div id="tafStation" class="station-name">McChord Field</div>
+          <div id="tafMeta" class="taf-meta">Loading forecast…</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span>Forecast Timeline</span>
+          <span class="time">UTC / Zulu</span>
+        </div>
+        <div class="forecast-wrap">
+          <div id="forecastGrid" class="forecast-grid">
+            <div class="fh">Period</div>
+            <div class="fh">Cat</div>
+            <div class="fh">Wind</div>
+            <div class="fh">Vis</div>
+            <div class="fh">Ceiling</div>
+            <div class="fh">Weather</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span>Raw TAF</span>
+          <span id="tafTime" class="time"></span>
+        </div>
+        <pre id="rawTaf" class="raw">Loading KTCM TAF…</pre>
+      </div>
+    </section>
+
+    <div id="errorBox" class="errorbox"></div>
+  </main>
+
+<script>
+(() => {
+  "use strict";
+
+  // ============================================================
+  // CONFIGURATION
+  // ============================================================
+  const CHECKWX_API_KEY = "YOUR_CHECKWX_API_KEY";
+  const REFRESH_MINUTES = 10;
+
+  const METAR_ICAO = "KPLU";
+  const TAF_ICAO = "KTCM";
+
+  // CheckWX API v2 endpoints
+  const API = "https://api.checkwx.com/v2";
+
+  const $ = (id) => document.getElementById(id);
+
+  const statusDot = $("statusDot");
+  const updateText = $("updateText");
+  const errorBox = $("errorBox");
+
+  function apiUrl(path) {
+    return `${API}${path}?x-api-key=${encodeURIComponent(CHECKWX_API_KEY)}`;
+  }
+
+  function showError(message) {
+    statusDot.className = "dot error";
+    updateText.textContent = "Weather unavailable";
+    errorBox.textContent = message;
+    errorBox.classList.add("show");
+  }
+
+  function clearError() {
+    errorBox.textContent = "";
+    errorBox.classList.remove("show");
+  }
+
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function utcStamp(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return `${pad2(d.getUTCDate())} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}Z`;
+  }
+
+  function localStamp(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    try {
+      return new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Los_Angeles",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short"
+      }).format(d);
+    } catch {
+      return "";
+    }
+  }
+
+  function periodLabel(section) {
+    const change = section?.change || {};
+    const code = change.code || "INITIAL";
+    const p = change.period || {};
+    const from = p.from ? new Date(p.from) : null;
+    const to = p.to ? new Date(p.to) : null;
+
+    const hm = (d) => d && !Number.isNaN(d.getTime())
+      ? `${pad2(d.getUTCDate())}/${pad2(d.getUTCHours())}Z`
+      : "";
+
+    if (code === "INITIAL") {
+      return p.from ? `INIT ${hm(from)}` : "INITIAL";
+    }
+    if (code === "FM") {
+      return `FM ${hm(from)}`;
+    }
+    if (from && to) {
+      return `${code} ${hm(from)}–${hm(to)}`;
+    }
+    return code;
+  }
+
+  function windText(wind) {
+    if (!wind) return "—";
+
+    let direction;
+    if (wind.direction === "VRB" || wind.degrees == null) {
+      direction = wind.direction || "VRB";
+    } else {
+      direction = `${String(Math.round(wind.degrees)).padStart(3, "0")}°`;
+    }
+
+    const speed = wind.speed?.kts;
+    const gust = wind.gust?.kts;
+
+    if (speed == null) return direction;
+    return `${direction} ${speed}${gust != null ? `G${gust}` : ""} kt`;
+  }
+
+  function ceilingFromClouds(clouds) {
+    if (!Array.isArray(clouds)) return null;
+    const ceilingLayer = clouds
+      .filter(c => ["BKN", "OVC", "VV"].includes(c?.code) && Number.isFinite(c?.feet))
+      .sort((a,b) => a.feet - b.feet)[0];
+    return ceilingLayer || null;
+  }
+
+  function categoryFromForecast(section) {
+    const vis = section?.visibility?.miles;
+    const ceiling = ceilingFromClouds(section?.clouds)?.feet;
+
+    let rank = 0; // 0 VFR, 1 MVFR, 2 IFR, 3 LIFR
+
+    if (Number.isFinite(vis)) {
+      if (vis < 1) rank = Math.max(rank, 3);
+      else if (vis < 3) rank = Math.max(rank, 2);
+      else if (vis <= 5) rank = Math.max(rank, 1);
+    }
+
+    if (Number.isFinite(ceiling)) {
+      if (ceiling < 500) rank = Math.max(rank, 3);
+      else if (ceiling < 1000) rank = Math.max(rank, 2);
+      else if (ceiling <= 3000) rank = Math.max(rank, 1);
+    }
+
+    return ["VFR", "MVFR", "IFR", "LIFR"][rank];
+  }
+
+  function conditionsText(conditions) {
+    if (!Array.isArray(conditions) || conditions.length === 0) return "None";
+    return conditions.map(c => c.text || c.code).filter(Boolean).join(", ");
+  }
+
+  function formatVisibility(v) {
+    if (!v) return "—";
+    if (v.text) {
+      return v.text
+        .replace("Greater than ", ">")
+        .replace(" miles", " SM")
+        .replace(" mile", " SM");
+    }
+    return Number.isFinite(v.miles) ? `${v.miles} SM` : "—";
+  }
+
+  function addForecastRow(grid, section) {
+    const category = categoryFromForecast(section);
+    const ceiling = ceilingFromClouds(section.clouds);
+
+    // Wide layout: normal six-column row.
+    const wideCells = [
+      {text: periodLabel(section), cls:"fc mono change"},
+      {html:`<span class="cat-pill ${category}">${category}</span>`, cls:"fc"},
+      {text: windText(section.wind), cls:"fc mono"},
+      {text: formatVisibility(section.visibility), cls:"fc mono"},
+      {text: ceiling ? `${ceiling.feet.toLocaleString()} ft` : "None", cls:"fc mono"},
+      {text: conditionsText(section.conditions), cls:"fc"}
+    ];
+
+    wideCells.forEach(c => {
+      const d = document.createElement("div");
+      d.className = `${c.cls} wide-forecast-cell`;
+      if (c.html) d.innerHTML = c.html;
+      else d.textContent = c.text;
+      grid.appendChild(d);
+    });
+
+    // Narrow layout: one stacked card per forecast period.
+    const row = document.createElement("div");
+    row.className = "forecast-row";
+
+    const period = document.createElement("div");
+    period.className = "forecast-period";
+    period.innerHTML = `
+      <span class="period-text">${periodLabel(section)}</span>
+      <span class="cat-pill ${category}">${category}</span>
+    `;
+    row.appendChild(period);
+
+    const narrowCells = [
+      ["Wind", windText(section.wind), true],
+      ["Visibility", formatVisibility(section.visibility), true],
+      ["Ceiling", ceiling ? `${ceiling.feet.toLocaleString()} ft` : "None", true],
+      ["Weather", conditionsText(section.conditions), false]
+    ];
+
+    narrowCells.forEach(([label, value, mono]) => {
+      const cell = document.createElement("div");
+      cell.className = `forecast-cell${mono ? " mono" : ""}`;
+      cell.dataset.label = label;
+      cell.textContent = value;
+      row.appendChild(cell);
+    });
+
+    grid.appendChild(row);
+  }
+
+  async function getJson(url) {
+    const response = await fetch(url, {
+      method: "GET",
+      mode: "cors",
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      let detail = "";
+      try {
+        const body = await response.json();
+        detail = body?.error || body?.message || "";
+      } catch {}
+      throw new Error(`CheckWX returned HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
+    }
+
+    return response.json();
+  }
+
+  async function loadWeather() {
+    clearError();
+    statusDot.className = "dot loading";
+    updateText.textContent = "Updating…";
+
+    if (!CHECKWX_API_KEY || CHECKWX_API_KEY === "YOUR_CHECKWX_API_KEY") {
+      showError("Add your CheckWX API key to CHECKWX_API_KEY near the top of the script.");
+      return;
+    }
+
+    try {
+      const [metarJson, tafJson] = await Promise.all([
+        getJson(apiUrl(`/metar/${METAR_ICAO}/decoded`)),
+        getJson(apiUrl(`/taf/${TAF_ICAO}/decoded`))
+      ]);
+
+      const m = metarJson?.data?.[0];
+      const t = tafJson?.data?.[0];
+
+      if (!m) throw new Error(`No METAR returned for ${METAR_ICAO}.`);
+      if (!t) throw new Error(`No TAF returned for ${TAF_ICAO}.`);
+
+      // ----- METAR -----
+      $("metarStation").textContent = m.station?.name || "Thun Field";
+
+      const cat = m.flight_category || "—";
+      $("metarCategory").textContent = cat;
+      $("metarCategory").className = `badge ${cat}`;
+
+      $("wind").textContent = windText(m.wind);
+      $("windSub").textContent =
+        m.wind?.direction && m.wind.direction !== "VRB"
+          ? `${m.wind.direction} wind`
+          : "\u00a0";
+
+      $("visibility").textContent = formatVisibility(m.visibility);
+      $("visibilitySub").textContent =
+        Number.isFinite(m.visibility?.meters)
+          ? `${Math.round(m.visibility.meters).toLocaleString()} m`
+          : "\u00a0";
+
+      const ceil = m.ceiling || ceilingFromClouds(m.clouds);
+      $("ceiling").textContent =
+        Number.isFinite(ceil?.feet) ? `${ceil.feet.toLocaleString()} ft` : "None";
+      $("ceilingSub").textContent = ceil?.text || "No BKN/OVC/VV ceiling";
+
+      $("altimeter").textContent =
+        Number.isFinite(m.pressure?.hg) ? `${Number(m.pressure.hg).toFixed(2)} inHg` : "—";
+      $("altimeterSub").textContent =
+        Number.isFinite(m.pressure?.mb) ? `${Math.round(m.pressure.mb)} hPa` : "\u00a0";
+
+      $("tempDew").textContent =
+        Number.isFinite(m.temperature?.celsius) && Number.isFinite(m.dewpoint?.celsius)
+          ? `${m.temperature.celsius}° / ${m.dewpoint.celsius}°C`
+          : "—";
+      $("tempDewSub").textContent =
+        Number.isFinite(m.temperature?.fahrenheit) && Number.isFinite(m.dewpoint?.fahrenheit)
+          ? `${m.temperature.fahrenheit}° / ${m.dewpoint.fahrenheit}°F`
+          : "\u00a0";
+
+      $("conditions").textContent = conditionsText(m.conditions);
+      $("conditionsSub").textContent =
+        Number.isFinite(m.humidity) ? `RH ${m.humidity}%` : "\u00a0";
+
+      $("rawMetar").textContent = m.raw_text || "No raw METAR text returned.";
+      $("metarTime").textContent =
+        m.observed ? `Observed ${utcStamp(m.observed)} · ${localStamp(m.observed)}` : "";
+
+      // ----- TAF -----
+      $("tafStation").textContent = t.station?.name || "McChord Field";
+      $("rawTaf").textContent = t.raw_text || "No raw TAF text returned.";
+      $("tafTime").textContent =
+        t.issued ? `Issued ${utcStamp(t.issued)} · ${localStamp(t.issued)}` : "";
+
+      const validFrom = t.period?.from ? utcStamp(t.period.from) : "";
+      const validTo = t.period?.to ? utcStamp(t.period.to) : "";
+      $("tafMeta").textContent =
+        validFrom && validTo ? `Valid ${validFrom} through ${validTo}` : "Terminal forecast";
+
+      const grid = $("forecastGrid");
+      while (grid.children.length > 6) grid.removeChild(grid.lastChild);
+
+      const forecast = Array.isArray(t.forecast) ? t.forecast : [];
+      if (forecast.length) {
+        forecast.forEach(section => addForecastRow(grid, section));
+      } else {
+        const d = document.createElement("div");
+        d.className = "fc";
+        d.style.gridColumn = "1 / -1";
+        d.textContent = "No decoded forecast sections returned.";
+        grid.appendChild(d);
+      }
+
+      const now = new Date();
+      updateText.textContent =
+        `Updated ${now.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"})}`;
+      statusDot.className = "dot";
+
+    } catch (err) {
+      console.error(err);
+      showError(
+        `${err.message} If this page is hosted publicly, also confirm your CheckWX key is valid and that browser requests are allowed.`
+      );
+    }
+  }
+
+  loadWeather();
+  window.setInterval(loadWeather, REFRESH_MINUTES * 60 * 1000);
+})();
+</script>
+</body>
+</html>

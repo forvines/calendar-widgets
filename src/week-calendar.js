@@ -8,10 +8,11 @@ function toFullCalendarEvent(event, calendarMap) {
     allDay: event.allDay,
     backgroundColor: calendar?.color,
     borderColor: calendar?.color,
-    textColor: '#081018',
+    textColor: readableTextColor(calendar?.color),
     extendedProps: {
       calendarId: event.calendarId,
       originalEvent: event,
+      calendarColor: calendar?.color,
     },
   };
 }
@@ -47,7 +48,7 @@ export function createWeekCalendar({
   let currentVisibleIds = new Set(visibleIds);
 
   const calendar = new window.FullCalendar.Calendar(element, {
-    themeSystem: 'classic',
+    themeSystem: 'standard',
     initialView: 'timeGridRollingSeven',
     initialDate: startOfCurrentWeek(),
     views: {
@@ -69,7 +70,7 @@ export function createWeekCalendar({
     slotLabelInterval: '01:00:00',
     scrollTime: `${String(config.week.initialScrollHour).padStart(2, '0')}:00:00`,
     scrollTimeReset: false,
-    dayHeaderFormat: { weekday: 'short', day: 'numeric' },
+    dayHeaderContent: renderDayHeader,
     slotLabelFormat: { hour: 'numeric' },
     eventTimeFormat: { hour: 'numeric', minute: '2-digit' },
     slotMinHeight: config.week.slotMinHeight,
@@ -77,6 +78,13 @@ export function createWeekCalendar({
     eventShortHeight: 28,
     slotEventOverlap: true,
     eventOrderStrict: true,
+    eventDidMount(info) {
+      const color = info.event.extendedProps.calendarColor;
+      if (!color) return;
+      info.el.style.setProperty('--event-color', color);
+      info.el.style.setProperty('background-color', hexToRgba(color, .88), 'important');
+      info.el.style.setProperty('color', readableTextColor(color), 'important');
+    },
     events: [],
     datesSet(info) {
       rangeLabel.textContent = formatRange(info.start, info.end);
@@ -121,6 +129,40 @@ export function createWeekCalendar({
       calendar.destroy();
     },
   };
+}
+
+function renderDayHeader(arg) {
+  const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(arg.date);
+  const day = arg.date.getDate();
+  return {
+    html: `
+      <span class="week-day-heading${arg.isToday ? ' is-today' : ''}">
+        <span class="week-day-name">${weekday}</span>
+        <span class="week-day-number">${day}</span>
+      </span>
+    `,
+  };
+}
+
+function hexToRgba(hex, alpha) {
+  if (!hex || typeof hex !== 'string') return `rgba(75, 95, 115, ${alpha})`;
+  const value = hex.replace('#', '').trim();
+  if (!/^[0-9a-f]{6}$/i.test(value)) return hex;
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function readableTextColor(hex) {
+  if (!hex || typeof hex !== 'string') return '#eef5fb';
+  const value = hex.replace('#', '').trim();
+  if (!/^[0-9a-f]{6}$/i.test(value)) return '#eef5fb';
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance > .67 ? '#081018' : '#ffffff';
 }
 
 function minutesToDuration(minutes) {
