@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+test-results/
+playwright-report/
+blob-report/
+.dev.vars
+.env
+.env.*
+!.env.example
