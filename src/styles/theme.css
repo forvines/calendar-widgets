@@ -29,4 +29,5 @@
   --week-pane-size: 1fr;
   --rolling-pane-size: 1.12fr;
   --hour-slot-min-height: 28px;
+  /* Weekly event typography/grid are tuned in fullcalendar.css. */
 }

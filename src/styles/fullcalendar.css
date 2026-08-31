@@ -14,7 +14,7 @@
   font-family: var(--font-main);
   font-size: var(--calendar-font-size);
 
-  --fc-border-color: var(--grid-line);
+  --fc-border-color: rgba(150, 170, 188, .28);
   --fc-page-bg-color: transparent;
   --fc-neutral-bg-color: transparent;
   --fc-neutral-text-color: var(--muted);
@@ -45,7 +45,7 @@
 #weekCalendar table,
 #weekCalendar td,
 #weekCalendar th {
-  border-color: var(--grid-line) !important;
+  border-color: rgba(150, 170, 188, .28) !important;
 }
 
 /* Each calendar surface is a 30%-transparent tile. */
@@ -130,7 +130,7 @@
 
 #weekCalendar .fc-timegrid-slot {
   min-height: var(--hour-slot-min-height);
-  border-color: var(--grid-line-soft) !important;
+  border-color: rgba(150, 170, 188, .17) !important;
 }
 
 #weekCalendar .fc-timegrid-slot-minor {
@@ -176,20 +176,20 @@
 }
 
 #weekCalendar .fc-event-main {
-  padding: 2px 4px;
+  padding: 1px 3px;
   color: inherit !important;
 }
 
 #weekCalendar .fc-event-time {
-  font-size: 9px;
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: 7.5px;
+  font-weight: 750;
+  line-height: 1.08;
 }
 
 #weekCalendar .fc-event-title {
-  font-size: 10px;
-  font-weight: 750;
-  line-height: 1.14;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.10;
 }
 
 #weekCalendar .fc-daygrid-event {

@@ -132,3 +132,13 @@ and events shaped like:
 ```
 
 The Google Calendar backend in a later phase will normalize Google API responses into this same shape, keeping authentication/data access separate from rendering.
+
+
+## Weekly calendar visual tuning
+
+The weekly event font sizes, event padding, and faint hour/day grid contrast are intentionally isolated in `src/styles/fullcalendar.css` so they can be adjusted without changing the weather or aviation widgets.
+
+
+### Visual tuning
+- The rolling/monthly calendar header has been removed to maximize usable space.
+- Rolling day/month surfaces are lighter so the DAKboard background photo shows through similarly to the weekly view.
