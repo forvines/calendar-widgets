@@ -8,12 +8,25 @@ import { createEventPopup } from './event-popup.js';
 const status = document.querySelector('#calendarStatus');
 const retryButton = document.querySelector('#calendarRetry');
 const content = document.querySelector('#calendarContent');
+const reloadButton = document.querySelector('#reloadButton');
 
-retryButton.addEventListener('click', start);
+// How often the calendar silently re-fetches from the backend so edits made in
+// Google Calendar appear on a passive wall display without manual interaction.
+const AUTO_REFRESH_MINUTES = 10;
+
+let currentMonth = null; // live accordion instance, so reloads can replace it
+
+retryButton.addEventListener('click', () => start());
+if (reloadButton) reloadButton.addEventListener('click', () => start({ isReload: true }));
 start();
+window.setInterval(() => start({ isReload: true, silent: true }), AUTO_REFRESH_MINUTES * 60 * 1000);
 
-async function start() {
-  setLoadState('loading', 'Loading calendars…');
+async function start({ isReload = false, silent = false } = {}) {
+  // On the first load (and non-silent reloads) show the loading state. A silent
+  // auto-refresh keeps the current view up while fetching so the display does
+  // not flash.
+  if (!silent) setLoadState('loading', isReload ? 'Reloading…' : 'Loading calendars…');
+  if (reloadButton) reloadButton.classList.add('is-busy');
   try {
     const data = await loadCalendarData();
     initializeCalendar(data);
@@ -21,7 +34,11 @@ async function start() {
     setSampleDataFlag(data.source === 'mock');
   } catch (error) {
     console.error('Calendar initialization failed:', error);
-    setLoadState('error', error.message || 'Calendar data could not be loaded.');
+    // A failed silent refresh leaves the existing view in place rather than
+    // replacing it with an error screen.
+    if (!silent) setLoadState('error', error.message || 'Calendar data could not be loaded.');
+  } finally {
+    if (reloadButton) reloadButton.classList.remove('is-busy');
   }
 }
 
@@ -36,7 +53,11 @@ function initializeCalendar(data) {
     calendars,
   });
 
-  const month = createMonthAccordion({
+  // Replace any prior instance (e.g. from a reload) so FullCalendar instances
+  // inside expanded weeks are not leaked.
+  if (currentMonth && typeof currentMonth.destroy === 'function') currentMonth.destroy();
+
+  currentMonth = createMonthAccordion({
     container: document.querySelector('#monthAccordion'),
     events,
     calendars,
@@ -49,7 +70,7 @@ function initializeCalendar(data) {
     document.querySelector('#calendarFilters'),
     calendars,
     state,
-    visibleIds => month.setVisibleCalendars(visibleIds),
+    visibleIds => currentMonth.setVisibleCalendars(visibleIds),
   );
 }
 

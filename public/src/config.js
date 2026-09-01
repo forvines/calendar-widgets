@@ -1,10 +1,10 @@
 export const config = {
   week: {
-    startHour: 5,
+    startHour: 6,
     endHour: 23,
     daysVisible: 7,
     slotMinutes: 60,
-    slotMinHeight: 28,
+    slotMinHeight: 42,
     initialScrollHour: 6,
   },
 

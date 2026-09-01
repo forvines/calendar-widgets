@@ -103,6 +103,29 @@ button {
   letter-spacing: .11em;
 }
 
+.reload-button {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(143, 163, 181, .22);
+  border-radius: 6px;
+  background: var(--tile-bg);
+  color: var(--soft);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.reload-button.is-busy {
+  animation: reload-spin .7s linear infinite;
+  opacity: .7;
+}
+
+@keyframes reload-spin {
+  to { transform: rotate(360deg); }
+}
+
 .sample-badge {
   flex: 0 0 auto;
   padding: 2px 6px;
