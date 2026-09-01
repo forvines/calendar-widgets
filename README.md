@@ -163,7 +163,13 @@ and events shaped like:
 }
 ```
 
-The Google Calendar backend in a later phase will normalize Google API responses into this same shape, keeping authentication/data access separate from rendering.
+The Worker now provides the first Google Calendar backend boundary at
+`GET /api/calendar?start=<ISO timestamp>&end=<ISO timestamp>`. It exchanges the
+configured refresh token only on the server, discovers readable calendars,
+loads a date range of events, and normalizes Google responses into this same
+shape. Requests are limited to 90 days. The calendar UI still uses mock data;
+wiring this endpoint into the browser with loading/error states is the next
+implementation task.
 
 
 ## Weekly calendar visual tuning
