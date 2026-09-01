@@ -19,6 +19,14 @@ export const config = {
     showCurrentTime: true,
   },
 
+  // After this many seconds without interaction, the calendar fades so the
+  // DAKboard background photo shows through more; any touch/click/scroll/key
+  // returns it to full opacity. Set idleFadeSeconds to 0 to disable.
+  idle: {
+    idleFadeSeconds: 120,
+    fadedOpacity: 0.25, // ~twice as see-through (lower = more transparent)
+  },
+
   // This object is intentionally keyed by stable calendar IDs.
   // Later, Google calendars can be discovered automatically and only calendars
   // that need overrides will need an entry here.
