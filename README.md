@@ -78,13 +78,23 @@ It uses Open-Meteo / Open-Meteo Air Quality and NWS endpoints directly from the 
 
 `public/widgets/aviation.html` contains the current KPLU METAR / KTCM TAF display using CheckWX. Its browser entry point is `public/widgets/aviation.js`, with independently testable report helpers in `public/widgets/aviation-core.js`.
 
-The repository version intentionally leaves:
+The CheckWX API key is held server-side by the Cloudflare Worker and is never
+sent to the browser. The widget calls `GET /api/aviation`, and the Worker
+proxies decoded METAR and TAF for the server-configured stations (see
+`STATIONS` in `worker/aviation.js`).
 
-```js
-const CHECKWX_API_KEY = "YOUR_CHECKWX_API_KEY";
+Provide the key as a Cloudflare secret, not a plaintext var:
+
+```bash
+# Production / deployed Worker
+npx wrangler secret put CHECKWX_API_KEY
+
+# Local development: add it to .dev.vars (git-ignored)
+echo 'CHECKWX_API_KEY=your-key-here' >> .dev.vars
 ```
 
-Do not commit a private API credential to a public Git repository. We can move CheckWX access behind the Cloudflare Worker later so the browser never needs the credential.
+Without the secret, `/api/aviation` returns `AVIATION_NOT_CONFIGURED` and the
+widget shows a clear "not configured" message rather than failing silently.
 
 ## Local development
 

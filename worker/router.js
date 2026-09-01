@@ -4,6 +4,11 @@ import {
   fetchCalendarData,
   hasGoogleCredentials,
 } from './google-calendar.js';
+import {
+  AviationServiceError,
+  fetchAviationData,
+  hasCheckwxCredentials,
+} from './aviation.js';
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -29,7 +34,7 @@ export async function handleApiRequest(request, env = {}, services = {}) {
       version: env.DEPLOYMENT_VERSION || 'development',
       services: {
         calendarConfigured: hasGoogleCredentials(env),
-        aviationConfigured: hasValues(env, ['CHECKWX_API_KEY']),
+        aviationConfigured: hasCheckwxCredentials(env),
       },
     }, { method: request.method });
   }
@@ -55,6 +60,21 @@ export async function handleApiRequest(request, env = {}, services = {}) {
     }
   }
 
+  if (url.pathname === '/api/aviation') {
+    try {
+      const loadAviation = services.fetchAviationData || fetchAviationData;
+      const data = await loadAviation(env);
+      return jsonResponse(data, { method: request.method });
+    } catch (error) {
+      if (error instanceof AviationServiceError) {
+        return errorResponse(error.status, error.code, error.message, {}, { method: request.method });
+      }
+      return errorResponse(502, 'AVIATION_SERVICE_FAILED', 'Aviation weather data could not be loaded.', {}, {
+        method: request.method,
+      });
+    }
+  }
+
   return errorResponse(404, 'API_ROUTE_NOT_FOUND', 'The requested API route does not exist.', {}, {
     method: request.method,
   });
@@ -66,8 +86,4 @@ function parseRange(params) {
   const duration = end.getTime() - start.getTime();
   if (!Number.isFinite(duration) || duration <= 0 || duration > 90 * 24 * 60 * 60 * 1000) return null;
   return { start, end };
-}
-
-function hasValues(env, names) {
-  return names.every(name => typeof env[name] === 'string' && env[name].trim().length > 0);
 }

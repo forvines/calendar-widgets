@@ -11,24 +11,19 @@ import {
   // ============================================================
   // CONFIGURATION
   // ============================================================
-  const CHECKWX_API_KEY = "YOUR_CHECKWX_API_KEY";
+  // The CheckWX API key is held server-side by the Cloudflare Worker. This
+  // widget calls the Worker's /api/aviation route, which proxies METAR + TAF
+  // for the server-configured stations. No credential is present in the
+  // browser.
   const REFRESH_MINUTES = 10;
 
-  const METAR_ICAO = "KPLU";
-  const TAF_ICAO = "KTCM";
-
-  // CheckWX API v2 endpoints
-  const API = "https://api.checkwx.com/v2";
+  const AVIATION_ENDPOINT = "/api/aviation";
 
   const $ = (id) => document.getElementById(id);
 
   const statusDot = $("statusDot");
   const updateText = $("updateText");
   const errorBox = $("errorBox");
-
-  function apiUrl(path) {
-    return `${API}${path}?x-api-key=${encodeURIComponent(CHECKWX_API_KEY)}`;
-  }
 
   function showError(message) {
     statusDot.className = "dot error";
@@ -120,22 +115,26 @@ import {
   async function getJson(url) {
     const response = await fetch(url, {
       method: "GET",
-      mode: "cors",
-      cache: "no-store"
+      cache: "no-store",
+      headers: { "Accept": "application/json" }
     });
 
+    const body = await response.json().catch(() => ({}));
+
     if (!response.ok) {
-      let detail = "";
-      try {
-        const body = await response.json();
-        detail = body?.error || body?.message || "";
-      } catch {
-        // A non-JSON error response has no additional CheckWX detail.
-      }
-      throw new Error(`CheckWX returned HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
+      const code = body?.error?.code;
+      const message = body?.error?.message || `Request failed with HTTP ${response.status}`;
+      throw new AviationError(message, code);
     }
 
-    return response.json();
+    return body;
+  }
+
+  class AviationError extends Error {
+    constructor(message, code) {
+      super(message);
+      this.code = code;
+    }
   }
 
   async function loadWeather() {
@@ -143,22 +142,14 @@ import {
     statusDot.className = "dot loading";
     updateText.textContent = "Updating…";
 
-    if (!CHECKWX_API_KEY || CHECKWX_API_KEY === "YOUR_CHECKWX_API_KEY") {
-      showError("Add your CheckWX API key to CHECKWX_API_KEY near the top of the script.");
-      return;
-    }
-
     try {
-      const [metarJson, tafJson] = await Promise.all([
-        getJson(apiUrl(`/metar/${METAR_ICAO}/decoded`)),
-        getJson(apiUrl(`/taf/${TAF_ICAO}/decoded`))
-      ]);
+      const data = await getJson(AVIATION_ENDPOINT);
 
-      const m = metarJson?.data?.[0];
-      const t = tafJson?.data?.[0];
+      const m = Array.isArray(data.metar) ? data.metar[0] : null;
+      const t = Array.isArray(data.taf) ? data.taf[0] : null;
 
-      if (!m) throw new Error(`No METAR returned for ${METAR_ICAO}.`);
-      if (!t) throw new Error(`No TAF returned for ${TAF_ICAO}.`);
+      if (!m) throw new Error("No METAR returned.");
+      if (!t) throw new Error("No TAF returned.");
 
       // ----- METAR -----
       $("metarStation").textContent = m.station?.name || "Thun Field";
@@ -238,9 +229,11 @@ import {
 
     } catch (err) {
       console.error(err);
-      showError(
-        `${err.message} If this page is hosted publicly, also confirm your CheckWX key is valid and that browser requests are allowed.`
-      );
+      if (err.code === "AVIATION_NOT_CONFIGURED") {
+        showError("Aviation weather is not configured. Set the CHECKWX_API_KEY secret on the Worker (wrangler secret put CHECKWX_API_KEY, or add it to .dev.vars for local development).");
+      } else {
+        showError(err.message || "Unable to load aviation weather.");
+      }
     }
   }
 
