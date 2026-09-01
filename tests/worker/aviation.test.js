@@ -52,7 +52,7 @@ describe('Aviation service (aviationweather.gov)', () => {
     const store = makeStore();
     const now = 1_000_000_000_000;
 
-    const result = await fetchAviationData(env, { store, now, fetchImpl });
+    const result = await fetchAviationData(env, { store, now, fetchImpl, stations: { metar: ['KPLU'], taf: ['KTCM'] } });
 
     // Normalized to the CheckWX-shaped fields the widgets consume.
     expect(result.metar[0]).toMatchObject({
@@ -88,7 +88,7 @@ describe('Aviation service (aviationweather.gov)', () => {
       'aviation:metar': { data: [{ icao: 'OLD' }], cachedAt: now - (TTL_SECONDS.metar + 60) * 1000 },
     });
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(awcMetar('KFRESH')));
-    const result = await fetchAviationData(env, { type: 'metar', store, now, fetchImpl });
+    const result = await fetchAviationData(env, { type: 'metar', store, now, fetchImpl, stations: { metar: ['KPLU'], taf: ['KTCM'] } });
     expect(result.metar[0].icao).toBe('KFRESH');
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
@@ -116,7 +116,7 @@ describe('Aviation service (aviationweather.gov)', () => {
 
   it('type=metar only fetches metar', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(awcMetar()));
-    const result = await fetchAviationData(env, { type: 'metar', store: makeStore(), now: 1e12, fetchImpl });
+    const result = await fetchAviationData(env, { type: 'metar', store: makeStore(), now: 1e12, fetchImpl, stations: { metar: ['KPLU'], taf: ['KTCM'] } });
     expect(result.metar).toBeDefined();
     expect(result.taf).toBeUndefined();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
