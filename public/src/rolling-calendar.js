@@ -1,5 +1,6 @@
 import { addDays, startOfWeek } from './date-utils.js';
 import { hexToRgba, readableTextColor } from './color-utils.js';
+import { createWeekCalendar } from './week-calendar.js';
 
 function sameCalendarDay(a, b) {
   return a.getFullYear() === b.getFullYear()
@@ -28,21 +29,19 @@ function isSpanning(event) {
   return eventEndDay(event).getTime() > dayStart(event.start).getTime();
 }
 
-function monthForWeek(weekStart) {
-  // The middle of the week produces more intuitive month labels around
-  // cross-month weeks than simply using Sunday's month.
-  return addDays(weekStart, 3);
+function weekKey(weekStart) {
+  return `${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
 }
 
-function monthKey(date) {
-  return `${date.getFullYear()}-${date.getMonth()}`;
-}
-
-function formatMonth(date) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    year: 'numeric',
-  }).format(date);
+function formatWeekRange(weekStart) {
+  const end = addDays(weekStart, 6);
+  const sameMonth = weekStart.getMonth() === end.getMonth();
+  const monthFmt = new Intl.DateTimeFormat('en-US', { month: 'short' });
+  const startM = monthFmt.format(weekStart);
+  const endM = monthFmt.format(end);
+  return sameMonth
+    ? `${startM} ${weekStart.getDate()} – ${end.getDate()}`
+    : `${startM} ${weekStart.getDate()} – ${endM} ${end.getDate()}`;
 }
 
 function formatEventTime(event) {
@@ -54,7 +53,7 @@ function formatEventTime(event) {
   }).format(event.start);
 }
 
-export function createRollingCalendar({
+export function createMonthAccordion({
   container,
   events,
   calendars,
@@ -63,10 +62,11 @@ export function createRollingCalendar({
   onEventClick,
 }) {
   const calendarMap = new Map(calendars.map(c => [c.id, c]));
-  const today = new Date();
-  const firstFutureWeek = addDays(startOfWeek(today), 7);
+  const currentWeekStart = startOfWeek(new Date());
   let renderedWeeks = config.rolling.initialWeeks;
   let currentVisibleIds = new Set(visibleIds);
+  let expandedKey = weekKey(currentWeekStart); // current week expanded by default
+  let expandedWeekView = null; // live FullCalendar instance for the open week
   let appending = false;
 
   function styleEventEl(el, event) {
@@ -83,8 +83,16 @@ export function createRollingCalendar({
       : `<span>${escapeHtml(event.title)}</span>`;
   }
 
+  function destroyExpandedView() {
+    if (expandedWeekView) {
+      expandedWeekView.destroy();
+      expandedWeekView = null;
+    }
+  }
+
   function render({ preserveScroll = true } = {}) {
     const savedScroll = preserveScroll ? container.scrollTop : 0;
+    destroyExpandedView();
     container.innerHTML = '';
 
     const weekdayHeader = document.createElement('div');
@@ -96,28 +104,62 @@ export function createRollingCalendar({
     }
     container.appendChild(weekdayHeader);
 
-    let previousMonth = null;
-
     for (let weekIndex = 0; weekIndex < renderedWeeks; weekIndex += 1) {
-      const weekStart = addDays(firstFutureWeek, weekIndex * 7);
-      const representativeMonth = monthForWeek(weekStart);
-      const key = monthKey(representativeMonth);
-
-      if (key !== previousMonth) {
-        const month = document.createElement('div');
-        month.className = 'rolling-month-label';
-        month.textContent = formatMonth(representativeMonth);
-        container.appendChild(month);
-        previousMonth = key;
-      }
-
-      container.appendChild(renderWeek(weekStart));
+      const weekStart = addDays(currentWeekStart, weekIndex * 7);
+      container.appendChild(renderWeekBlock(weekStart));
     }
 
     if (preserveScroll) container.scrollTop = savedScroll;
   }
 
-  function renderWeek(weekStart) {
+  function renderWeekBlock(weekStart) {
+    const key = weekKey(weekStart);
+    const isExpanded = key === expandedKey;
+
+    const block = document.createElement('section');
+    block.className = `week-block${isExpanded ? ' is-expanded' : ''}`;
+
+    // Clickable week header (toggles this week).
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'week-block-header';
+    header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    if (sameCalendarDay(weekStart, currentWeekStart)) header.classList.add('is-current');
+    header.innerHTML = `
+      <span class="week-block-caret" aria-hidden="true">${isExpanded ? '▾' : '▸'}</span>
+      <span class="week-block-range">${escapeHtml(formatWeekRange(weekStart))}</span>
+    `;
+    header.addEventListener('click', () => toggleWeek(key));
+    block.appendChild(header);
+
+    if (isExpanded) {
+      const frame = document.createElement('div');
+      frame.className = 'week-block-timegrid';
+      block.appendChild(frame);
+      // Mount the detailed TimeGrid for this specific week. Deferred to the
+      // next frame so the element is in the DOM and sized before FullCalendar
+      // measures it.
+      requestAnimationFrame(() => {
+        destroyExpandedView();
+        expandedWeekView = createWeekCalendar({
+          element: frame,
+          events,
+          calendars,
+          visibleIds: currentVisibleIds,
+          config,
+          onEventClick,
+          weekStart,
+        });
+        requestAnimationFrame(() => expandedWeekView && expandedWeekView.updateSize());
+      });
+    } else {
+      block.appendChild(renderCompactWeek(weekStart));
+    }
+
+    return block;
+  }
+
+  function renderCompactWeek(weekStart) {
     const weekRow = document.createElement('div');
     weekRow.className = 'rolling-week';
 
@@ -128,15 +170,13 @@ export function createRollingCalendar({
 
     const visible = events.filter(e => currentVisibleIds.has(e.calendarId));
 
-    // Assign spanning (all-day / multi-day) events to lanes so overlapping bars
-    // stack. Compute this first so day cells can reserve the right top padding.
     const spanning = visible
       .filter(isSpanning)
       .filter(e => dayStart(e.start) <= weekEnd && eventEndDay(e) >= days[0])
       .sort((a, b) => (dayStart(a.start) - dayStart(b.start))
         || (eventEndDay(b) - eventEndDay(a)));
 
-    const laneEnds = []; // last occupied column index per lane
+    const laneEnds = [];
     const placed = [];
     for (const event of spanning) {
       const startCol = Math.max(0, Math.round((dayStart(event.start) - days[0]) / dayMs));
@@ -148,8 +188,6 @@ export function createRollingCalendar({
     }
     const laneCount = laneEnds.length;
 
-    // Day cells (normal grid flow). Each reserves top space for the bar lanes
-    // so its single-day events begin below any spanning bars.
     for (let i = 0; i < 7; i += 1) {
       const dayCell = document.createElement('div');
       dayCell.className = 'rolling-day';
@@ -173,7 +211,7 @@ export function createRollingCalendar({
           pill.className = 'rolling-event';
           styleEventEl(pill, event);
           pill.innerHTML = eventInner(event);
-          pill.addEventListener('click', () => onEventClick(event));
+          pill.addEventListener('click', evt => { evt.stopPropagation(); onEventClick(event); });
           stack.appendChild(pill);
         }
         dayCell.appendChild(stack);
@@ -181,9 +219,6 @@ export function createRollingCalendar({
       weekRow.appendChild(dayCell);
     }
 
-    // Spanning-bar overlay: one continuous bar per event, positioned over the
-    // day columns by percentage width and lane offset. Decoupled from the day-
-    // cell flow so bars never collide with numbers or per-day events.
     if (placed.length) {
       const layer = document.createElement('div');
       layer.className = 'rolling-span-layer';
@@ -198,13 +233,20 @@ export function createRollingCalendar({
         bar.style.top = `calc(var(--rolling-day-number-h) + ${lane} * var(--rolling-span-h))`;
         styleEventEl(bar, event);
         bar.innerHTML = eventInner(event);
-        bar.addEventListener('click', () => onEventClick(event));
+        bar.addEventListener('click', evt => { evt.stopPropagation(); onEventClick(event); });
         layer.appendChild(bar);
       }
       weekRow.appendChild(layer);
     }
 
     return weekRow;
+  }
+
+  function toggleWeek(key) {
+    // Collapse if already open; otherwise open this one (implicitly closing the
+    // previously expanded week). Only one open at a time.
+    expandedKey = expandedKey === key ? null : key;
+    render({ preserveScroll: true });
   }
 
   container.addEventListener('scroll', () => {
@@ -223,11 +265,16 @@ export function createRollingCalendar({
   return {
     setVisibleCalendars(ids) {
       currentVisibleIds = new Set(ids);
+      if (expandedWeekView) expandedWeekView.setVisibleCalendars([...currentVisibleIds]);
       render({ preserveScroll: true });
     },
-    reset() {
+    goToToday() {
+      expandedKey = weekKey(currentWeekStart);
       renderedWeeks = config.rolling.initialWeeks;
       render({ preserveScroll: false });
+    },
+    destroy() {
+      destroyExpandedView();
     },
   };
 }

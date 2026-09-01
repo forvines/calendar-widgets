@@ -25,7 +25,7 @@ button {
 .calendar-app {
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(0, var(--week-pane-size)) minmax(0, var(--rolling-pane-size));
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 5px;
   width: 100%;
   height: 100%;
@@ -34,7 +34,8 @@ button {
 }
 
 .calendar-content {
-  display: contents;
+  min-height: 0;
+  height: 100%;
 }
 
 .calendar-content[hidden],
@@ -77,8 +78,7 @@ button {
   to { transform: rotate(360deg); }
 }
 
-.app-toolbar,
-.calendar-panel {
+.app-toolbar {
   min-width: 0;
   background: var(--dashboard-bg);
   border: 1px solid var(--border);
@@ -162,54 +162,6 @@ button {
   border-radius: 50%;
 }
 
-.calendar-panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-height: 0;
-}
-
-
-.rolling-panel {
-  grid-template-rows: minmax(0, 1fr);
-}
-
-.panel-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 35px;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border);
-  background: var(--tile-bg);
-}
-
-.eyebrow {
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 850;
-  letter-spacing: .10em;
-}
-
-.panel-title {
-  margin-top: 1px;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.heading-hint {
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.week-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.icon-button,
 .text-button {
   min-height: 28px;
   border: 1px solid rgba(143, 163, 181, .22);
@@ -217,34 +169,11 @@ button {
   background: var(--tile-bg);
   color: var(--soft);
   cursor: pointer;
-}
-
-.icon-button {
-  width: 30px;
-  padding: 0;
-  font-size: 20px;
-  line-height: 1;
-}
-
-.text-button {
   padding: 3px 8px;
   font-size: 9px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .06em;
-}
-
-.week-calendar-frame {
-  min-height: 0;
-  padding: 0;
-  background: transparent;
-  touch-action: pan-y;
-}
-
-#weekCalendar {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
 }
 
 .event-overlay {
@@ -309,5 +238,4 @@ button {
   .calendar-app { gap: 3px; }
   .app-toolbar { padding-inline: 6px; }
   .calendar-filter { padding-inline: 6px; }
-  .heading-hint { display: none; }
 }

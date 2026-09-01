@@ -33,28 +33,44 @@ function toFullCalendarEvent(event, calendarMap) {
   };
 }
 
-function formatRange(start, endExclusive) {
-  const end = new Date(endExclusive);
-  end.setDate(end.getDate() - 1);
+// Widen the visible hour range so timed events that fall before the configured
+// start hour or after the configured end hour are still shown for this week.
+function weekHourRange(events, weekStart, config) {
+  const start = new Date(weekStart);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
 
-  const sameMonth = start.getMonth() === end.getMonth();
-  const monthStart = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(start);
-  const monthEnd = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(end);
+  let minHour = config.week.startHour;
+  let maxHour = config.week.endHour;
 
-  if (sameMonth) {
-    return `${monthStart} ${start.getDate()} – ${end.getDate()}`;
+  for (const event of events) {
+    if (event.allDay || !event.start) continue;
+    if (event.start >= end || (event.end || event.start) < start) continue;
+    minHour = Math.min(minHour, event.start.getHours());
+    if (event.end) {
+      // Round the end hour up so an event ending at 23:15 still shows hour 24.
+      const endHour = event.end.getHours() + (event.end.getMinutes() > 0 ? 1 : 0);
+      maxHour = Math.max(maxHour, endHour);
+    } else {
+      maxHour = Math.max(maxHour, event.start.getHours() + 1);
+    }
   }
-  return `${monthStart} ${start.getDate()} – ${monthEnd} ${end.getDate()}`;
+
+  return {
+    minHour: Math.max(0, Math.min(minHour, 24)),
+    maxHour: Math.min(24, Math.max(maxHour, minHour + 1)),
+  };
 }
 
 export function createWeekCalendar({
   element,
-  rangeLabel,
   events,
   calendars,
   visibleIds,
   config,
   onEventClick,
+  weekStart,
 }) {
   if (!window.FullCalendar?.Calendar) {
     throw new Error('FullCalendar did not load. Check the CDN connection.');
@@ -62,11 +78,12 @@ export function createWeekCalendar({
 
   const calendarMap = new Map(calendars.map(c => [c.id, c]));
   let currentVisibleIds = new Set(visibleIds);
+  const initialDate = weekStart || startOfWeek();
+  const { minHour, maxHour } = weekHourRange(events, initialDate, config);
 
   const calendar = new window.FullCalendar.Calendar(element, {
-    themeSystem: 'standard',
     initialView: 'timeGridRollingSeven',
-    initialDate: startOfWeek(),
+    initialDate,
     views: {
       timeGridRollingSeven: {
         type: 'timeGrid',
@@ -75,12 +92,12 @@ export function createWeekCalendar({
     },
     headerToolbar: false,
     firstDay: config.display.firstDay,
-    height: '100%',
-    expandRows: true,
+    height: 'auto',
+    expandRows: false,
     allDaySlot: config.display.showAllDayEvents,
     nowIndicator: config.display.showCurrentTime,
-    slotMinTime: `${String(config.week.startHour).padStart(2, '0')}:00:00`,
-    slotMaxTime: `${String(config.week.endHour).padStart(2, '0')}:00:00`,
+    slotMinTime: `${String(minHour).padStart(2, '0')}:00:00`,
+    slotMaxTime: `${String(maxHour).padStart(2, '0')}:00:00`,
     slotDuration: minutesToDuration(config.week.slotMinutes),
     slotLabelInterval: '01:00:00',
     scrollTime: `${String(config.week.initialScrollHour).padStart(2, '0')}:00:00`,
@@ -126,9 +143,6 @@ export function createWeekCalendar({
       info.el.style.setProperty('overflow', 'hidden', 'important');
     },
     events: [],
-    datesSet(info) {
-      rangeLabel.textContent = formatRange(info.start, info.end);
-    },
     eventClick(info) {
       info.jsEvent.preventDefault();
       const original = info.event.extendedProps.originalEvent;
@@ -149,7 +163,6 @@ export function createWeekCalendar({
 
   calendar.render();
   refreshEvents();
-  installSwipeNavigation(element, calendar, config.week.swipeIncrementDays);
 
   // v6's global build injects CSS asynchronously; the calendar may render
   // before its container has final dimensions. Force a re-layout once the
@@ -157,21 +170,6 @@ export function createWeekCalendar({
   requestAnimationFrame(() => calendar.updateSize());
 
   return {
-    nextDay() {
-      calendar.incrementDate({ days: config.week.swipeIncrementDays });
-    },
-    previousDay() {
-      calendar.incrementDate({ days: -config.week.swipeIncrementDays });
-    },
-    nextWeek() {
-      calendar.incrementDate({ days: 7 });
-    },
-    previousWeek() {
-      calendar.incrementDate({ days: -7 });
-    },
-    today() {
-      calendar.gotoDate(startOfWeek());
-    },
     setVisibleCalendars(ids) {
       currentVisibleIds = new Set(ids);
       refreshEvents();
@@ -199,34 +197,4 @@ function minutesToDuration(minutes) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`;
-}
-
-function installSwipeNavigation(element, calendar, incrementDays) {
-  let pointerId = null;
-  let startX = 0;
-  let startY = 0;
-
-  element.addEventListener('pointerdown', event => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    pointerId = event.pointerId;
-    startX = event.clientX;
-    startY = event.clientY;
-  }, { passive: true });
-
-  element.addEventListener('pointerup', event => {
-    if (pointerId !== event.pointerId) return;
-    const dx = event.clientX - startX;
-    const dy = event.clientY - startY;
-    pointerId = null;
-
-    // Only treat a deliberate horizontal gesture as navigation. Vertical
-    // scrolling remains native inside FullCalendar's time grid.
-    if (Math.abs(dx) < 65 || Math.abs(dx) < Math.abs(dy) * 1.35) return;
-
-    calendar.incrementDate({ days: dx < 0 ? incrementDays : -incrementDays });
-  }, { passive: true });
-
-  element.addEventListener('pointercancel', () => {
-    pointerId = null;
-  }, { passive: true });
 }

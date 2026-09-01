@@ -2,8 +2,7 @@ import { config } from './config.js';
 import { loadCalendarData } from './calendar-data.js';
 import { createCalendarState } from './state.js';
 import { renderCalendarFilters } from './calendar-filters.js';
-import { createWeekCalendar } from './week-calendar.js';
-import { createRollingCalendar } from './rolling-calendar.js';
+import { createMonthAccordion } from './rolling-calendar.js';
 import { createEventPopup } from './event-popup.js';
 
 const status = document.querySelector('#calendarStatus');
@@ -37,18 +36,8 @@ function initializeCalendar(data) {
     calendars,
   });
 
-  const weekCalendar = createWeekCalendar({
-    element: document.querySelector('#weekCalendar'),
-    rangeLabel: document.querySelector('#weekRange'),
-    events,
-    calendars,
-    visibleIds: state.getVisibleIds(),
-    config,
-    onEventClick: event => popup.open(event),
-  });
-
-  const rollingCalendar = createRollingCalendar({
-    container: document.querySelector('#rollingCalendar'),
+  const month = createMonthAccordion({
+    container: document.querySelector('#monthAccordion'),
     events,
     calendars,
     visibleIds: state.getVisibleIds(),
@@ -60,15 +49,8 @@ function initializeCalendar(data) {
     document.querySelector('#calendarFilters'),
     calendars,
     state,
-    visibleIds => {
-      weekCalendar.setVisibleCalendars(visibleIds);
-      rollingCalendar.setVisibleCalendars(visibleIds);
-    },
+    visibleIds => month.setVisibleCalendars(visibleIds),
   );
-
-  document.querySelector('#prevDay').onclick = () => weekCalendar.previousWeek();
-  document.querySelector('#nextDay').onclick = () => weekCalendar.nextWeek();
-  document.querySelector('#todayButton').onclick = () => weekCalendar.today();
 }
 
 function setLoadState(state, message) {
