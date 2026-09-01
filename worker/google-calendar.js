@@ -20,6 +20,8 @@ export async function fetchCalendarData(env, range, fetchImpl = fetch) {
     throw new ServiceError(503, 'CALENDAR_NOT_CONFIGURED', 'Google Calendar credentials are not configured.');
   }
 
+  // Auth and the calendar-list fetch are whole-request dependencies: if either
+  // fails there is nothing meaningful to render, so they throw.
   const accessToken = await exchangeRefreshToken(env, fetchImpl);
   const googleCalendars = await fetchAllPages(
     `${CALENDAR_API}/users/me/calendarList?${new URLSearchParams({
@@ -32,24 +34,49 @@ export async function fetchCalendarData(env, range, fetchImpl = fetch) {
   );
 
   const calendars = googleCalendars.map(normalizeCalendar);
-  const eventGroups = await Promise.all(calendars.map(async calendar => {
-    const params = new URLSearchParams({
-      timeMin: range.start.toISOString(),
-      timeMax: range.end.toISOString(),
-      singleEvents: 'true',
-      orderBy: 'startTime',
-      showDeleted: 'false',
-      maxResults: '2500',
-    });
-    const items = await fetchAllPages(
-      `${CALENDAR_API}/calendars/${encodeURIComponent(calendar.id)}/events?${params}`,
-      accessToken,
-      fetchImpl,
-    );
-    return items.map(item => normalizeEvent(item, calendar.id)).filter(Boolean);
-  }));
 
-  return { calendars, events: eventGroups.flat() };
+  // Per-calendar event fetches are isolated: one calendar becoming
+  // inaccessible (permissions revoked, transient upstream error) must not blank
+  // the whole dashboard. A failed calendar stays in the list (its filter chip
+  // still works) but contributes no events, and its id is reported so the
+  // client can indicate the partial result.
+  const settled = await Promise.allSettled(
+    calendars.map(calendar => fetchCalendarEvents(calendar.id, range, accessToken, fetchImpl)),
+  );
+
+  const events = [];
+  const failedCalendarIds = [];
+  settled.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      events.push(...result.value);
+    } else {
+      failedCalendarIds.push(calendars[index].id);
+    }
+  });
+
+  return {
+    calendars,
+    events,
+    partial: failedCalendarIds.length > 0,
+    failedCalendarIds,
+  };
+}
+
+async function fetchCalendarEvents(calendarId, range, accessToken, fetchImpl) {
+  const params = new URLSearchParams({
+    timeMin: range.start.toISOString(),
+    timeMax: range.end.toISOString(),
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    showDeleted: 'false',
+    maxResults: '2500',
+  });
+  const items = await fetchAllPages(
+    `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+    accessToken,
+    fetchImpl,
+  );
+  return items.map(item => normalizeEvent(item, calendarId)).filter(Boolean);
 }
 
 async function exchangeRefreshToken(env, fetchImpl) {
