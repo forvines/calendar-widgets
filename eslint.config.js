@@ -6,8 +6,6 @@ export default [
     ignores: [
       'node_modules/**',
       '.wrangler/**',
-      'playwright-report/**',
-      'test-results/**',
     ],
   },
   eslint.configs.recommended,

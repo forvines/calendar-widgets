@@ -116,11 +116,7 @@ Run the automated checks with:
 npm run lint
 npm run test:unit
 npm run test:worker
-npm run test:browser
 ```
-
-The browser suite requires Playwright's Chromium build, installed with
-`npx playwright install chromium`.
 
 ## Calendar data boundary
 
