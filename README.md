@@ -22,7 +22,7 @@ Each page is standalone and can be embedded in its own DAKboard widget with an i
 
 ## Shared presentation
 
-`shared/dashboard-theme.css` contains the common visual tokens used by all three widgets:
+`public/shared/dashboard-theme.css` contains the common visual tokens used by all three widgets:
 
 ```css
 --db-shell-bg       /* background between tiles */
@@ -41,7 +41,7 @@ Each page is standalone and can be embedded in its own DAKboard widget with an i
 
 Change this file first for site-wide appearance changes such as transparency, border contrast, text color, or corner radius.
 
-The calendar has additional calendar-specific controls in `src/styles/theme.css`, including font sizes, event radius, week/month pane ratio, and hour-row height.
+The calendar has additional calendar-specific controls in `public/src/styles/theme.css`, including font sizes, event radius, week/month pane ratio, and hour-row height.
 
 ## Calendar — current phase
 
@@ -60,23 +60,23 @@ The calendar is still the static UI prototype and deliberately uses mock events.
 
 ### Calendar customization
 
-`src/config.js` — behavior such as start/end hour, visible days, swipe increment, future weeks, and event limits.
+`public/src/config.js` — behavior such as start/end hour, visible days, swipe increment, future weeks, and event limits.
 
-`src/styles/theme.css` — calendar-specific typography and sizing.
+`public/src/styles/theme.css` — calendar-specific typography and sizing.
 
-`src/styles/fullcalendar.css` — hour-by-hour calendar presentation.
+`public/src/styles/fullcalendar.css` — hour-by-hour calendar presentation.
 
-`src/styles/rolling-calendar.css` — rolling future-week presentation.
+`public/src/styles/rolling-calendar.css` — rolling future-week presentation.
 
 ## Weather
 
-`widgets/weather.html` is the current Bonney Lake weather widget. It includes current conditions, AQI, NWS alerts, 24-hour forecast, 7-day forecast, and moon information.
+`public/widgets/weather.html` is the current Bonney Lake weather widget. It includes current conditions, AQI, NWS alerts, 24-hour forecast, 7-day forecast, and moon information. Its browser entry point is `public/widgets/weather.js`, while pure formatting and classification helpers live in `public/widgets/weather-core.js`.
 
 It uses Open-Meteo / Open-Meteo Air Quality and NWS endpoints directly from the browser. Secondary AQI/alert failures are designed not to blank the main weather display.
 
 ## Aviation
 
-`widgets/aviation.html` contains the current KPLU METAR / KTCM TAF display using CheckWX.
+`public/widgets/aviation.html` contains the current KPLU METAR / KTCM TAF display using CheckWX. Its browser entry point is `public/widgets/aviation.js`, with independently testable report helpers in `public/widgets/aviation-core.js`.
 
 The repository version intentionally leaves:
 
@@ -88,20 +88,39 @@ Do not commit a private API credential to a public Git repository. We can move C
 
 ## Local development
 
-No build step is required yet. Because the calendar JavaScript uses ES modules, serve the repository over HTTP rather than opening `index.html` directly:
+The widgets do not require a production build. Node.js 22 or newer is used for
+the local Cloudflare Worker server, linting, and automated tests. Install the
+development dependencies and start the Worker:
 
 ```bash
-cd dakboard-widgets
-python3 -m http.server 8080
+npm ci
+npm run dev
 ```
 
 Then open:
 
 ```text
-http://localhost:8080/
-http://localhost:8080/widgets/weather.html
-http://localhost:8080/widgets/aviation.html
+http://localhost:8787/
+http://localhost:8787/widgets/weather.html
+http://localhost:8787/widgets/aviation.html
 ```
+
+The Worker currently provides a non-secret deployment check at
+`http://localhost:8787/api/health`. Copy `.dev.vars.example` to `.dev.vars`
+when local API credentials are needed in a later implementation phase. Never
+commit `.dev.vars` or real credentials.
+
+Run the automated checks with:
+
+```bash
+npm run lint
+npm run test:unit
+npm run test:worker
+npm run test:browser
+```
+
+The browser suite requires Playwright's Chromium build, installed with
+`npx playwright install chromium`.
 
 ## Calendar data boundary
 
@@ -136,7 +155,7 @@ The Google Calendar backend in a later phase will normalize Google API responses
 
 ## Weekly calendar visual tuning
 
-The weekly event font sizes, event padding, and faint hour/day grid contrast are intentionally isolated in `src/styles/fullcalendar.css` so they can be adjusted without changing the weather or aviation widgets.
+The weekly event font sizes, event padding, and faint hour/day grid contrast are intentionally isolated in `public/src/styles/fullcalendar.css` so they can be adjusted without changing the weather or aviation widgets.
 
 
 ### Visual tuning

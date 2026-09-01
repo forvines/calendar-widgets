@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Weather</title>
+  <style>
+    :root{
+      --bg:#0b1118;
+      --panel:#101923;
+      --panel2:#0d151e;
+      --border:var(--db-border, #263543);
+      --text:var(--db-text, #eef5fb);
+      --muted:var(--db-muted, #8fa3b5);
+      --soft:var(--db-soft, #c8d4de);
+
+      --good:#22c55e;
+      --moderate:#eab308;
+      --usg:#f97316;
+      --unhealthy:#ef4444;
+      --very:#a855f7;
+      --hazard:#991b1b;
+
+      --rain:#60a5fa;
+      --hot:#fb923c;
+      --wind:#c084fc;
+    }
+
+    *{box-sizing:border-box}
+
+    html,body{
+      margin:0;
+      width:100%;
+      min-height:100%;
+      background:transparent;
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+    }
+
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar{
+      display:none;
+      width:0;
+      height:0;
+    }
+
+    body{padding:6px}
+
+    .panel{
+      width:100%;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:6px 9px;
+      border-bottom:1px solid var(--border);
+      background:var(--db-toolbar-bg, rgba(10,17,24,.40));
+    }
+
+    .title{
+      font-size:10px;
+      line-height:1;
+      font-weight:850;
+      letter-spacing:.11em;
+      color:var(--soft);
+    }
+
+    .status{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:9px;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+
+    .dot{
+      width:6px;
+      height:6px;
+      border-radius:999px;
+      background:var(--good);
+    }
+    .dot.loading{background:var(--moderate)}
+    .dot.error{background:var(--unhealthy)}
+
+    .alert{
+      display:none;
+      padding:9px 11px;
+      border-bottom:1px solid rgba(239,68,68,.45);
+      background:rgba(127,29,29,.32);
+      color:#fee2e2;
+    }
+    .alert.show{display:block}
+    .alert-title{
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .alert-detail{
+      margin-top:3px;
+      font-size:10px;
+      line-height:1.3;
+      color:#fecaca;
+    }
+
+    .hero{
+      display:grid;
+      grid-template-columns:minmax(160px,1.15fr) minmax(260px,2fr);
+      gap:1px;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+      border-bottom:1px solid var(--border);
+    }
+
+    .current{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+      padding:7px 7px;
+      background:var(--db-tile-strong, rgba(16,25,35,.70));
+    }
+
+    .wx-icon{
+      flex:0 0 auto;
+      width:50px;
+      text-align:center;
+      font-size:36px;
+      line-height:1;
+    }
+
+    .temp-wrap{min-width:0}
+    .temp{
+      font-size:39px;
+      line-height:.92;
+      font-weight:850;
+      letter-spacing:-.045em;
+    }
+    .condition{
+      margin-top:5px;
+      font-size:11px;
+      font-weight:750;
+      color:var(--soft);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .feels{
+      margin-top:1px;
+      font-size:9px;
+      color:var(--muted);
+    }
+    .today-summary{
+      margin-top:6px;
+      padding-top:5px;
+      border-top:1px solid rgba(143,163,181,.20);
+      font-size:9px;
+      line-height:1.25;
+      font-weight:750;
+      color:var(--soft);
+      white-space:nowrap;
+    }
+
+    .summary{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(68px,1fr));
+      gap:1px;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+    }
+
+    .metric{
+      min-width:0;
+      padding:7px 7px;
+      background:var(--db-tile-bg, rgba(13,21,30,.70));
+    }
+    .metric-label{
+      margin-bottom:4px;
+      color:var(--muted);
+      font-size:9.6px;
+      font-weight:850;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+    }
+    .metric-value{
+      font-size:13px;
+      line-height:1.15;
+      font-weight:800;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .metric-sub{
+      margin-top:3px;
+      color:var(--muted);
+      font-size:9.6px;
+      line-height:1.2;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .aqi-pill{
+      display:inline-block;
+      min-width:48px;
+      padding:4px 6px;
+      border-radius:6px;
+      color:#fff;
+      text-align:center;
+      font-size:12px;
+      font-weight:900;
+      line-height:1;
+      background:#64748b;
+    }
+    .aq-good{background:var(--good)}
+    .aq-moderate{background:#b89d00;color:#101010}
+    .aq-usg{background:var(--usg)}
+    .aq-unhealthy{background:var(--unhealthy)}
+    .aq-very{background:var(--very)}
+    .aq-hazard{background:var(--hazard)}
+
+    .focus{
+      display:none;
+      margin:9px 11px 0;
+      padding:7px 9px;
+      border:1px solid var(--border);
+      border-radius:7px;
+      background:rgba(11,21,31,.70);
+      font-size:10px;
+      font-weight:750;
+      color:var(--soft);
+    }
+    .focus.show{display:block}
+    .focus.rain{border-color:rgba(96,165,250,.45)}
+    .focus.wind{border-color:rgba(192,132,252,.45)}
+    .focus.heat{border-color:rgba(251,146,60,.45)}
+
+    .section{
+      padding:4px 9px 6px;
+    }
+    .section + .section{
+      border-top:1px solid var(--border);
+    }
+
+    .section-title{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:3px;
+      color:var(--muted);
+      font-size:9.6px;
+      font-weight:900;
+      letter-spacing:.11em;
+      text-transform:uppercase;
+    }
+    .section-title .secondary{
+      font-size:9.6px;
+      font-weight:600;
+      letter-spacing:0;
+      text-transform:none;
+    }
+
+    .hourly{
+      display:grid;
+      grid-template-columns:repeat(8,minmax(62px,1fr));
+      border:1px solid var(--border);
+      border-radius:8px;
+      overflow:hidden;
+      background:var(--db-shell-bg, rgba(11,17,24,.40));
+      gap:1px;
+    }
+
+    .hour{
+      min-width:0;
+      padding:4px 4px 3px;
+      text-align:center;
+      background:var(--db-tile-bg, rgba(13,21,30,.70));
+    }
+    .hour-time{
+      color:var(--muted);
+      font-size:9.6px;
+      font-weight:800;
+    }
+    .hour-icon{
+      margin:1px 0 1px;
+      font-size:18px;
+      line-height:1;
+    }
+    .hour-temp{
+      font-size:12px;
+      font-weight:850;
+    }
+    .hour-pop{
+      margin-top:1px;
+      font-size:9px;
+      color:#93c5fd;
+      font-weight:750;
+    }
+    .rain-track{
+      height:11px;
+      margin:3px auto 0;
+      width:8px;
+      display:flex;
+      align-items:flex-end;
+      border-radius:2px;
+      overflow:hidden;
+      background:rgba(96,165,250,.08);
+    }
+    .rain-bar{
+      width:100%;
+      min-height:1px;
+      background:var(--rain);
+      border-radius:2px 2px 0 0;
+    }
+
+    .daily{
+      display:grid;
+      grid-template-columns:repeat(7,minmax(72px,1fr));
+      gap:5px;
+    }
+    .day{
+      min-width:0;
+      padding:4px 4px;
+      border:1px solid var(--border);
+      border-radius:7px;
+      background:var(--db-tile-bg, rgba(13,21,30,.70));
+      text-align:center;
+    }
+    .day-name{
+      font-size:9.6px;
+      font-weight:900;
+      color:var(--soft);
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+    .day-icon{
+      margin:1px 0 1px;
+      font-size:19px;
+      line-height:1;
+    }
+    .day-temps{
+      font-size:11px;
+      font-weight:850;
+    }
+    .low{color:var(--muted);font-weight:700}
+    .day-pop{
+      margin-top:1px;
+      color:#93c5fd;
+      font-size:9.6px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .footer{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:4px 9px 5px;
+      border-top:1px solid var(--border);
+      color:#607386;
+      font-size:8.4px;
+      line-height:1.25;
+    }
+
+    .errorbox{
+      display:none;
+      margin:9px 11px 11px;
+      padding:7px 7px;
+      border:1px solid rgba(239,68,68,.5);
+      border-radius:7px;
+      background:rgba(239,68,68,.08);
+      color:#fecaca;
+      font-size:10px;
+      line-height:1.35;
+    }
+    .errorbox.show{display:block}
+
+    /* Compact DAKboard layout:
+       preserve horizontal density instead of stacking vertically. */
+    @media(max-width:720px){
+      body{padding:4px}
+
+      .topbar{
+        padding:5px 8px;
+      }
+
+
+      .hero{
+        grid-template-columns:minmax(125px,.82fr) minmax(0,2.18fr);
+      }
+
+      .current{
+        gap:7px;
+        padding:7px 7px;
+      }
+
+      .wx-icon{
+        width:38px;
+        font-size:29px;
+      }
+
+      .temp{
+        font-size:34px;
+      }
+
+      .condition{
+        margin-top:3px;
+      }
+
+      .today-summary{
+        margin-top:1px;
+        padding-top:4px;
+        white-space:normal;
+      }
+
+      .summary{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+      }
+
+      .metric{
+        padding:5px 5px;
+      }
+
+      .metric-label{
+        margin-bottom:3px;
+        letter-spacing:.06em;
+      }
+
+      .metric-value{
+        font-size:12px;
+      }
+
+      .metric-sub{
+        margin-top:1px;
+        font-size:9px;
+      }
+
+      .section{
+        padding:3px 7px 5px;
+      }
+
+      .section-title{
+        margin-bottom:3px;
+      }
+
+      /* Keep all eight 3-hour forecast points on one line. */
+      .hourly{
+        grid-template-columns:repeat(8,minmax(0,1fr));
+      }
+
+      .hour{
+        padding:4px 2px 3px;
+      }
+
+      .hour-time{
+        font-size:9px;
+      }
+
+      .hour-icon{
+        margin:1px 0 0;
+        font-size:15px;
+      }
+
+      .hour-temp{
+        font-size:11px;
+      }
+
+      .hour-pop{
+        margin-top:1px;
+        font-size:8.4px;
+        line-height:1.08;
+        white-space:normal;
+      }
+
+      .rain-track{
+        height:8px;
+        margin-top:1px;
+        width:6px;
+      }
+
+      /* Keep the whole week on one row too. */
+      .daily{
+        grid-template-columns:repeat(7,minmax(0,1fr));
+        gap:3px;
+      }
+
+      .day{
+        padding:4px 2px;
+      }
+
+      .day-name{
+        font-size:9px;
+      }
+
+      .day-icon{
+        margin:1px 0;
+        font-size:16px;
+      }
+
+      .day-temps{
+        font-size:10px;
+      }
+
+      .day-pop{
+        margin-top:1px;
+        font-size:8.4px;
+        line-height:1.08;
+      }
+
+      .focus{
+        margin:4px 7px 0;
+        padding:4px 6px;
+      }
+
+      .footer{
+        display:none;
+      }
+    }
+
+    @media(max-width:460px){
+      .hero{
+        grid-template-columns:minmax(112px,.78fr) minmax(0,2.22fr);
+      }
+
+      .current{
+        padding:5px;
+        gap:5px;
+      }
+
+      .wx-icon{
+        width:31px;
+        font-size:25px;
+      }
+
+      .temp{
+        font-size:30px;
+      }
+
+      .condition{
+        font-size:10px;
+      }
+
+      .feels,
+      .today-summary{
+        font-size:9.6px;
+      }
+
+      .metric{
+        padding:4px 3px;
+      }
+
+      .metric-label{
+        font-size:8.4px;
+      }
+
+      .metric-value{
+        font-size:10.5px;
+      }
+
+      .metric-sub{
+        font-size:8.16px;
+      }
+
+      .aqi-pill{
+        min-width:37px;
+        padding:3px 4px;
+        font-size:10px;
+      }
+
+      .section{
+        padding:3px 6px 5px;
+      }
+
+      .section-title .secondary{
+        display:none;
+      }
+
+
+      .status{
+        font-size:9.6px;
+      }
+
+      .hour{
+        padding-left:1px;
+        padding-right:1px;
+      }
+
+      .hour-icon{
+        font-size:14px;
+      }
+
+      .day{
+        padding-left:1px;
+        padding-right:1px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="../shared/dashboard-theme.css">
+</head>
+
+<body>
+  <main class="panel">
+    <header class="topbar">
+      <div class="title">LOCAL WEATHER</div>
+      <div class="status">
+        <span id="statusDot" class="dot loading"></span>
+        <span id="updateText">Loading…</span>
+      </div>
+    </header>
+
+    <div id="alertBanner" class="alert">
+      <div id="alertTitle" class="alert-title"></div>
+      <div id="alertDetail" class="alert-detail"></div>
+    </div>
+
+    <section class="hero">
+      <div class="current">
+        <div id="currentIcon" class="wx-icon">☁️</div>
+        <div class="temp-wrap">
+          <div id="currentTemp" class="temp">—°</div>
+          <div id="currentCondition" class="condition">Loading weather…</div>
+          <div id="feelsLike" class="feels">Feels like —°</div>
+          <div id="todaySummary" class="today-summary">Today — / — · Rain —</div>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="metric">
+          <div class="metric-label">Air Quality</div>
+          <div id="aqiValue" class="metric-value"><span class="aqi-pill">—</span></div>
+          <div id="aqiSub" class="metric-sub">PM2.5 —</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Wind</div>
+          <div id="windValue" class="metric-value">—</div>
+          <div id="windSub" class="metric-sub">Gust —</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Humidity</div>
+          <div id="humidityValue" class="metric-value">—</div>
+          <div id="humiditySub" class="metric-sub">UV —</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Sunset</div>
+          <div id="sunsetValue" class="metric-value">—</div>
+          <div id="sunriseSub" class="metric-sub">Sunrise —</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Pressure</div>
+          <div id="pressureValue" class="metric-value">—</div>
+          <div class="metric-sub">Sea level</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Rain Now</div>
+          <div id="rainNowValue" class="metric-value">—</div>
+          <div id="rainNowSub" class="metric-sub">This hour</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Clouds</div>
+          <div id="cloudValue" class="metric-value">—</div>
+          <div class="metric-sub">Current cover</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Moon</div>
+          <div id="moonValue" class="metric-value">🌙 —</div>
+          <div id="moonSub" class="metric-sub">—</div>
+        </div>
+      </div>
+    </section>
+
+    <div id="focusMessage" class="focus"></div>
+
+    <section class="section">
+      <div class="section-title">
+        <span>Next 24 Hours</span>
+        <span class="secondary">3-hour intervals · temperature + rain</span>
+      </div>
+      <div id="hourlyGrid" class="hourly"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <span>7-Day Forecast</span>
+        <span id="locationLabel" class="secondary">Bonney Lake · 98391</span>
+      </div>
+      <div id="dailyGrid" class="daily"></div>
+    </section>
+
+    <div id="errorBox" class="errorbox"></div>
+
+    <footer class="footer">
+      <span>Weather: Open-Meteo · Alerts: U.S. National Weather Service</span>
+      <span>Air quality: CAMS via Open-Meteo</span>
+    </footer>
+  </main>
+
+<script type="module" src="./weather.js"></script>
+</body>
+</html>
