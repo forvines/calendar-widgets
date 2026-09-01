@@ -118,23 +118,6 @@ npm run test:unit
 npm run test:worker
 ```
 
-The Worker currently provides a non-secret deployment check at
-`http://localhost:8787/api/health`. Copy `.dev.vars.example` to `.dev.vars`
-when local API credentials are needed in a later implementation phase. Never
-commit `.dev.vars` or real credentials.
-
-Run the automated checks with:
-
-```bash
-npm run lint
-npm run test:unit
-npm run test:worker
-npm run test:browser
-```
-
-The browser suite requires Playwright's Chromium build, installed with
-`npx playwright install chromium`.
-
 ## Calendar data boundary
 
 The UI consumes calendars shaped like:
