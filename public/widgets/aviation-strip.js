@@ -1,13 +1,4 @@
-import {
-  ceilingFromClouds,
-  conditionsText,
-  formatVisibility,
-  metarCategory,
-  metarSummary,
-  periodLabel,
-  windText,
-} from './aviation-core.js';
-
+import { metarCategory } from './aviation-core.js';
 import { MOCK_AVIATION } from './aviation-mock.js';
 
 const METAR_REFRESH_MS = 30 * 60 * 1000;
@@ -27,194 +18,116 @@ function endpoint(type, force) {
 }
 
 const strip = document.getElementById('strip');
-const pillList = document.getElementById('pillList');
-const statusDot = document.getElementById('statusDot');
-const statusText = document.getElementById('statusText');
+const rowsEl = document.getElementById('rows');
 const errorText = document.getElementById('errorText');
-const detailBack = document.getElementById('detailBack');
-const detailIcao = document.getElementById('detailIcao');
-const detailName = document.getElementById('detailName');
-const detailCat = document.getElementById('detailCat');
-const detailBody = document.getElementById('detailBody');
 
-detailBack.addEventListener('click', showList);
-
-// Station reports, kept per type so METAR and TAF refresh on independent
-// cadences without re-fetching each other.
-let metarStations = [];
-let tafStations = [];
-let openKey = null;
+// One row per station report, kept per type so METAR and TAF refresh on
+// independent cadences.
+let metarRows = [];
+let tafRows = [];
 let lastMetarFetch = 0;
-
-function stationsAll() {
-  return [...metarStations, ...tafStations];
-}
 
 function esc(v) {
   return String(v ?? '')
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
-// Fetch a single report type. force triggers a server refresh (bounded by the
-// server's floor). Updates only that type's stations, then re-renders.
 async function loadType(type, { force = false } = {}) {
-  statusDot.className = 'dot loading';
-  statusText.textContent = 'Updating…';
   strip.classList.remove('is-error');
 
   if (MOCK) {
-    const body = MOCK_AVIATION;
-    if (!type || type === 'metar') { metarStations = buildMetar(body); lastMetarFetch = Date.now(); }
-    if (!type || type === 'taf') { tafStations = buildTaf(body); }
-    renderList();
-    if (openKey) {
-      const still = stationsAll().find(s => s.key === openKey);
-      if (still) renderDetail(still);
-    }
-    statusDot.className = 'dot';
-    statusText.textContent = 'Preview (mock data)';
+    if (!type || type === 'metar') { metarRows = buildMetar(MOCK_AVIATION); lastMetarFetch = Date.now(); }
+    if (!type || type === 'taf') { tafRows = buildTaf(MOCK_AVIATION); }
+    render();
     return;
   }
 
   try {
     const res = await fetch(endpoint(type, force), { headers: { Accept: 'application/json' }, cache: 'no-store' });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const code = body?.error?.code;
-      throw new Error(code === 'AVIATION_NOT_CONFIGURED' ? 'Aviation not configured'
-        : (body?.error?.message || `HTTP ${res.status}`));
-    }
-    if (type === 'metar') { metarStations = buildMetar(body); lastMetarFetch = Date.now(); }
-    else if (type === 'taf') { tafStations = buildTaf(body); }
-    renderList();
-    if (openKey) {
-      const still = stationsAll().find(s => s.key === openKey);
-      if (still) renderDetail(still);
-    }
-    statusDot.className = 'dot';
-    statusText.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+    if (!res.ok) throw new Error(body?.error?.message || `HTTP ${res.status}`);
+    if (type === 'metar' || !type) { metarRows = buildMetar(body); lastMetarFetch = Date.now(); }
+    if (type === 'taf' || !type) { tafRows = buildTaf(body); }
+    render();
   } catch (err) {
     console.error(err);
-    statusDot.className = 'dot error';
-    statusText.textContent = 'Unavailable';
     strip.classList.add('is-error');
-    errorText.textContent = err.message || 'Error';
+    errorText.textContent = err.message || 'Unavailable';
   }
 }
 
 function buildMetar(body) {
-  return (Array.isArray(body.metar) ? body.metar : []).map((m, i) => ({
-    key: `metar:${m.icao || i}`,
-    kind: 'METAR',
+  // A single row of station category pills: KPLU, KRNT, KTIW, KCLS, ...
+  const stations = (Array.isArray(body.metar) ? body.metar : []).map(m => ({
     icao: m.icao || '—',
-    name: m.station?.name || '',
     category: metarCategory(m),
-    summary: metarSummary(m),
-    raw: m.raw_text || '',
-    report: m,
   }));
+  return stations.length ? [{ kind: 'METAR', stations }] : [];
 }
 
 function buildTaf(body) {
-  return (Array.isArray(body.taf) ? body.taf : []).map((t, i) => {
-    const first = Array.isArray(t.forecast) ? t.forecast[0] : null;
+  return (Array.isArray(body.taf) ? body.taf : []).map(t => {
+    const sections = Array.isArray(t.forecast) ? t.forecast : [];
+    const periods = sections.map(sec => ({
+      category: metarCategory({ visibility: sec.visibility, clouds: sec.clouds }),
+      time: transitionTime(sec),
+    }));
     return {
-      key: `taf:${t.icao || i}`,
       kind: 'TAF',
       icao: t.icao || '—',
-      name: t.station?.name || '',
-      category: first ? categoryOf(first) : '—',
-      summary: tafSummary(t),
+      periods,
       raw: t.raw_text || '',
-      report: t,
     };
   });
 }
 
-function categoryOf(section) {
-  return metarCategory({ visibility: section.visibility, clouds: section.clouds });
-}
-
-function tafSummary(t) {
-  const from = t.period?.from ? utc(t.period.from) : '';
-  const to = t.period?.to ? utc(t.period.to) : '';
-  return from && to ? `valid ${from}→${to}` : 'terminal forecast';
-}
-
-function utc(iso) {
+// Zulu HH of a forecast section's transition (its start), e.g. "18Z".
+function transitionTime(section) {
+  const iso = section?.change?.period?.from;
+  if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCHours()).padStart(2, '0')}Z`;
+  return `${String(d.getUTCHours()).padStart(2, '0')}Z`;
 }
 
-function renderList() {
-  pillList.innerHTML = '';
-  for (const s of stationsAll()) {
-    const pill = document.createElement('button');
-    pill.type = 'button';
-    pill.className = 'pill';
-    pill.innerHTML = `
-      <span class="pill-icao">${esc(s.icao)}</span>
-      <span class="cat ${esc(s.category)}">${esc(s.category)}</span>
-      <span class="pill-raw">${esc(s.raw || s.summary)}</span>
-      <span class="pill-kind">${esc(s.kind)}</span>
-    `;
-    pill.addEventListener('click', () => openStation(s));
-    pillList.appendChild(pill);
+function render() {
+  const all = [...metarRows, ...tafRows];
+  rowsEl.innerHTML = '';
+  for (const s of all) {
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    if (s.kind === 'TAF') {
+      // A horizontal timeline of category pills, one per transition, each
+      // labeled with its Zulu transition time.
+      const pills = s.periods.map(p =>
+        `<span class="tafpill ${esc(p.category)}">${esc(p.category)}${p.time ? ` <span class="tafpill-t">${esc(p.time)}</span>` : ''}</span>`
+      ).join('');
+      row.innerHTML = `
+        <span class="icao">${esc(s.icao)}</span>
+        <span class="taf-timeline">${pills || '<span class="raw">No forecast</span>'}</span>
+        <span class="kind">TAF</span>
+      `;
+    } else {
+      // METAR row: one station pill (ICAO + category) per station.
+      const pills = s.stations.map(st =>
+        `<span class="stnpill ${esc(st.category)}"><span class="stnpill-id">${esc(st.icao)}</span> ${esc(st.category)}</span>`
+      ).join('');
+      row.innerHTML = `
+        <span class="kind">METAR</span>
+        <span class="taf-timeline">${pills || '<span class="raw">No data</span>'}</span>
+      `;
+      row.addEventListener('click', () => {
+        if (!MOCK && Date.now() - lastMetarFetch > INTERACTION_FLOOR_MS) {
+          loadType('metar', { force: true });
+        }
+      });
+    }
+    rowsEl.appendChild(row);
   }
 }
 
-// Opening a METAR station also triggers an interaction refresh (bounded by the
-// client floor; the server floor is the real guard against exceeding quota).
-function openStation(s) {
-  openKey = s.key;
-  renderDetail(s);
-  if (s.kind === 'METAR' && Date.now() - lastMetarFetch > INTERACTION_FLOOR_MS) {
-    loadType('metar', { force: true });
-  }
-}
-
-function renderDetail(s) {
-  openKey = s.key;
-  detailIcao.textContent = s.icao;
-  detailName.textContent = s.name;
-  detailCat.textContent = s.category;
-  detailCat.className = `cat ${s.category}`;
-  detailBody.innerHTML = s.kind === 'METAR' ? metarDetail(s.report) : tafDetail(s.report);
-  strip.classList.add('is-detail');
-}
-
-function metarDetail(m) {
-  const ceiling = m.ceiling || ceilingFromClouds(m.clouds);
-  const lines = [
-    `<div class="detail-line"><b>Wind</b> ${esc(windText(m.wind))}</div>`,
-    `<div class="detail-line"><b>Visibility</b> ${esc(formatVisibility(m.visibility))}</div>`,
-    `<div class="detail-line"><b>Ceiling</b> ${Number.isFinite(ceiling?.feet) ? esc(ceiling.feet.toLocaleString()) + ' ft' : 'None'}</div>`,
-    `<div class="detail-line"><b>Weather</b> ${esc(conditionsText(m.conditions))}</div>`,
-  ];
-  if (m.raw_text) lines.push(`<pre class="raw">${esc(m.raw_text)}</pre>`);
-  return lines.join('');
-}
-
-function tafDetail(t) {
-  const rows = (Array.isArray(t.forecast) ? t.forecast : []).slice(0, 6).map(section => {
-    const cat = categoryOf(section);
-    return `<div class="detail-line"><b>${esc(periodLabel(section))}</b> `
-      + `<span class="cat ${cat}" style="font-size:8.5px">${cat}</span> `
-      + `${esc(windText(section.wind))} · ${esc(formatVisibility(section.visibility))}</div>`;
-  });
-  if (t.raw_text) rows.push(`<pre class="raw">${esc(t.raw_text)}</pre>`);
-  return rows.join('') || '<div class="detail-line">No forecast sections.</div>';
-}
-
-function showList() {
-  openKey = null;
-  strip.classList.remove('is-detail');
-}
-
-// Initial load of both, then independent refresh cadences.
 loadType('metar');
 loadType('taf');
 window.setInterval(() => loadType('metar'), METAR_REFRESH_MS);
 window.setInterval(() => loadType('taf'), TAF_REFRESH_MS);
-
