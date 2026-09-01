@@ -6,13 +6,11 @@ export default [
     ignores: [
       'node_modules/**',
       '.wrangler/**',
-      'playwright-report/**',
-      'test-results/**',
     ],
   },
   eslint.configs.recommended,
   {
-    files: ['public/src/**/*.js'],
+    files: ['public/**/*.js'],
     languageOptions: {
       globals: globals.browser,
     },

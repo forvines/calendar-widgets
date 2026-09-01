@@ -70,13 +70,13 @@ The calendar is still the static UI prototype and deliberately uses mock events.
 
 ## Weather
 
-`public/widgets/weather.html` is the current Bonney Lake weather widget. It includes current conditions, AQI, NWS alerts, 24-hour forecast, 7-day forecast, and moon information.
+`public/widgets/weather.html` is the current Bonney Lake weather widget. It includes current conditions, AQI, NWS alerts, 24-hour forecast, 7-day forecast, and moon information. Its browser entry point is `public/widgets/weather.js`, while pure formatting and classification helpers live in `public/widgets/weather-core.js`.
 
 It uses Open-Meteo / Open-Meteo Air Quality and NWS endpoints directly from the browser. Secondary AQI/alert failures are designed not to blank the main weather display.
 
 ## Aviation
 
-`public/widgets/aviation.html` contains the current KPLU METAR / KTCM TAF display using CheckWX.
+`public/widgets/aviation.html` contains the current KPLU METAR / KTCM TAF display using CheckWX. Its browser entry point is `public/widgets/aviation.js`, with independently testable report helpers in `public/widgets/aviation-core.js`.
 
 The repository version intentionally leaves:
 
@@ -103,6 +103,19 @@ Then open:
 http://localhost:8787/
 http://localhost:8787/widgets/weather.html
 http://localhost:8787/widgets/aviation.html
+```
+
+The Worker currently provides a non-secret deployment check at
+`http://localhost:8787/api/health`. Copy `.dev.vars.example` to `.dev.vars`
+when local API credentials are needed in a later implementation phase. Never
+commit `.dev.vars` or real credentials.
+
+Run the automated checks with:
+
+```bash
+npm run lint
+npm run test:unit
+npm run test:worker
 ```
 
 The Worker currently provides a non-secret deployment check at
