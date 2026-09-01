@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aviation Strip</title>
+  <style>
+    :root {
+      --vfr:#19c36a;
+      --mvfr:#2589ff;
+      --ifr:#ef4444;
+      --lifr:#d946ef;
+      --warn:#f59e0b;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      color: var(--db-text, #eef5fb);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+    body { padding: 5px; }
+
+    .strip {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--db-border, #263543);
+      border-radius: var(--db-corner, 10px);
+      background: var(--db-tile-bg, rgba(13,21,30,.60));
+      overflow: hidden;
+    }
+
+    /* ---- Pill list (collapsed default) ---- */
+    .pill-list {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .pill {
+      flex: 1 1 0;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 0;
+      padding: 4px 10px;
+      border: 0;
+      border-top: 1px solid var(--db-grid-line, rgba(150,170,188,.20));
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      width: 100%;
+    }
+    .pill:first-child { border-top: 0; }
+
+    .pill-icao {
+      flex: 0 0 auto;
+      font-weight: 900;
+      font-size: 15px;
+      letter-spacing: .04em;
+      min-width: 3.4em;
+    }
+
+    .cat {
+      flex: 0 0 auto;
+      min-width: 42px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .05em;
+      color: #fff;
+      background: #5c6670;
+    }
+    .cat.VFR { background: var(--vfr); }
+    .cat.MVFR { background: var(--mvfr); }
+    .cat.IFR { background: var(--ifr); color:#fff; }
+    .cat.LIFR { background: var(--lifr); }
+
+    .pill-summary {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--db-soft, #c8d4de);
+    }
+
+    /* Full raw METAR/TAF string to the right of the pills. Wraps so the whole
+       report is readable across the wide strip. */
+    .pill-raw {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10.5px;
+      line-height: 1.25;
+      color: var(--db-soft, #c8d4de);
+      overflow-wrap: anywhere;
+    }
+
+    .pill-kind {
+      flex: 0 0 auto;
+      font-size: 8.5px;
+      font-weight: 850;
+      letter-spacing: .1em;
+      color: var(--db-muted, #8fa3b5);
+    }
+
+    /* ---- Detail view (per-station, swaps in on tap) ---- */
+    .detail {
+      display: none;
+      flex: 1 1 auto;
+      min-height: 0;
+      flex-direction: column;
+    }
+    .strip.is-detail .pill-list { display: none; }
+    .strip.is-detail .detail { display: flex; }
+
+    .detail-head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--db-border, #263543);
+      background: var(--db-toolbar-bg, rgba(10,17,24,.40));
+    }
+    .detail-back {
+      flex: 0 0 auto;
+      border: 1px solid rgba(143,163,181,.25);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--db-soft, #c8d4de);
+      font-size: 14px;
+      line-height: 1;
+      padding: 3px 8px;
+      cursor: pointer;
+    }
+    .detail-icao { font-weight: 900; font-size: 14px; }
+    .detail-name {
+      min-width: 0; flex: 1 1 auto;
+      color: var(--db-muted, #8fa3b5);
+      font-size: 10px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .detail-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding: 6px 8px;
+      scrollbar-width: none;
+    }
+    .detail-body::-webkit-scrollbar { display: none; }
+
+    .detail-line {
+      font-size: 10px;
+      line-height: 1.4;
+      color: var(--db-soft, #c8d4de);
+      margin-bottom: 4px;
+    }
+    .detail-line b { color: var(--db-text, #eef5fb); font-weight: 800; }
+
+    .raw {
+      margin: 4px 0 0;
+      padding: 6px 7px;
+      border: 1px solid var(--db-border, #263543);
+      border-radius: 7px;
+      background: var(--db-tile-bg, rgba(13,21,30,.70));
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10.5px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: #e5edf5;
+    }
+
+    /* ---- Status / error ---- */
+    .strip-status {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-top: 1px solid var(--db-grid-line, rgba(150,170,188,.20));
+      font-size: 8.5px;
+      color: var(--db-muted, #8fa3b5);
+    }
+    .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--vfr); }
+    .dot.loading { background: var(--warn); }
+    .dot.error { background: var(--ifr); }
+
+    .error-text { display: none; color: #fecaca; }
+    .strip.is-error .error-text { display: inline; }
+  </style>
+  <link rel="stylesheet" href="../shared/dashboard-theme.css">
+</head>
+<body>
+  <main id="strip" class="strip">
+    <div id="pillList" class="pill-list" aria-label="Aviation stations"></div>
+
+    <div id="detail" class="detail">
+      <div class="detail-head">
+        <button id="detailBack" class="detail-back" type="button" aria-label="Back">‹</button>
+        <span id="detailIcao" class="detail-icao"></span>
+        <span id="detailName" class="detail-name"></span>
+        <span id="detailCat" class="cat"></span>
+      </div>
+      <div id="detailBody" class="detail-body"></div>
+    </div>
+
+    <div class="strip-status">
+      <span id="statusDot" class="dot loading"></span>
+      <span id="statusText">Loading…</span>
+      <span id="errorText" class="error-text"></span>
+    </div>
+  </main>
+
+  <script type="module" src="./aviation-strip.js"></script>
+</body>
+</html>

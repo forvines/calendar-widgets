@@ -1,7 +1,7 @@
 import { errorResponse, jsonResponse } from './response.js';
 import { ServiceError } from './service.js';
 import { fetchCalendarData, hasGoogleCredentials } from './google-calendar.js';
-import { fetchAviationData, hasCheckwxCredentials } from './aviation.js';
+import { fetchAviationData, hasCheckwxCredentials, createCacheStore } from './aviation.js';
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -52,8 +52,15 @@ export async function handleApiRequest(request, env = {}, services = {}) {
   if (url.pathname === '/api/aviation') {
     const denied = enforceAccess(request, env, url);
     if (denied) return denied;
+    const typeParam = url.searchParams.get('type');
+    const type = (typeParam === 'metar' || typeParam === 'taf') ? typeParam : undefined;
+    const force = url.searchParams.get('force') === '1';
+    // Use the Cloudflare Cache API as the durable per-report store when
+    // available (production); tests inject their own via services.
+    const store = services.aviationStore
+      || (typeof caches !== 'undefined' && caches.default ? createCacheStore(caches.default) : undefined);
     return runService(
-      () => (services.fetchAviationData || fetchAviationData)(env),
+      () => (services.fetchAviationData || fetchAviationData)(env, { type, force, store }),
       'AVIATION_SERVICE_FAILED',
       'Aviation weather data could not be loaded.',
       request.method,

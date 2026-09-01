@@ -74,3 +74,27 @@ export function formatVisibility(visibility) {
   }
   return Number.isFinite(visibility.miles) ? `${visibility.miles} SM` : '—';
 }
+
+// Compact one-line METAR summary for the strip widget: wind, visibility, and
+// ceiling (or CLR), separated by middots. Falls back gracefully on missing
+// fields.
+export function metarSummary(report) {
+  if (!report) return '—';
+  const parts = [];
+  const wind = windText(report.wind);
+  if (wind && wind !== '—') parts.push(wind);
+  const vis = formatVisibility(report.visibility);
+  if (vis && vis !== '—') parts.push(vis);
+  const ceiling = report.ceiling || ceilingFromClouds(report.clouds);
+  if (Number.isFinite(ceiling?.feet)) parts.push(`${ceiling.feet.toLocaleString()}ft`);
+  else parts.push('CLR');
+  return parts.length ? parts.join(' · ') : '—';
+}
+
+// Compact category for a METAR: prefer the API's flight_category, else derive
+// it the same way TAF sections are categorized.
+export function metarCategory(report) {
+  if (!report) return '—';
+  return report.flight_category
+    || categoryFromForecast({ visibility: report.visibility, clouds: report.clouds });
+}
