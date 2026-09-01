@@ -1,3 +1,5 @@
+import { ServiceError, readJson } from './service.js';
+
 const CHECKWX_API = 'https://api.checkwx.com/v2';
 
 // Server-side station configuration. These are defined on the server, not taken
@@ -18,7 +20,7 @@ export function hasCheckwxCredentials(env = {}) {
 // many stations without another round trip.
 export async function fetchAviationData(env, fetchImpl = fetch, stations = STATIONS) {
   if (!hasCheckwxCredentials(env)) {
-    throw new AviationServiceError(503, 'AVIATION_NOT_CONFIGURED', 'CheckWX credentials are not configured.');
+    throw new ServiceError(503, 'AVIATION_NOT_CONFIGURED', 'CheckWX credentials are not configured.');
   }
 
   const [metar, taf] = await Promise.all([
@@ -45,28 +47,12 @@ async function fetchReport(path, apiKey, fetchImpl) {
       headers: { 'X-API-Key': apiKey },
     });
   } catch {
-    throw new AviationServiceError(502, 'AVIATION_UPSTREAM_FAILED', 'Aviation weather data could not be loaded.');
+    throw new ServiceError(502, 'AVIATION_UPSTREAM_FAILED', 'Aviation weather data could not be loaded.');
   }
 
   if (!response.ok) {
-    throw new AviationServiceError(502, 'AVIATION_UPSTREAM_FAILED', 'Aviation weather data could not be loaded.');
+    throw new ServiceError(502, 'AVIATION_UPSTREAM_FAILED', 'Aviation weather data could not be loaded.');
   }
 
   return readJson(response);
-}
-
-async function readJson(response) {
-  try {
-    return await response.json();
-  } catch {
-    return {};
-  }
-}
-
-export class AviationServiceError extends Error {
-  constructor(status, code, message) {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
 }

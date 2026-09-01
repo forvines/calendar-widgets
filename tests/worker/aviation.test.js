@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  AviationServiceError,
-  fetchAviationData,
-  hasCheckwxCredentials,
-} from '../../worker/aviation.js';
+import { fetchAviationData, hasCheckwxCredentials } from '../../worker/aviation.js';
+import { ServiceError } from '../../worker/service.js';
 
 const env = { CHECKWX_API_KEY: 'checkwx-test-key' };
 
@@ -60,7 +57,7 @@ describe('CheckWX aviation service', () => {
       code: 'AVIATION_UPSTREAM_FAILED',
       status: 502,
     });
-    await expect(fetchAviationData(env, fetchMock)).rejects.toBeInstanceOf(AviationServiceError);
+    await expect(fetchAviationData(env, fetchMock)).rejects.toBeInstanceOf(ServiceError);
   });
 
   it('maps a network error to a typed service error', async () => {

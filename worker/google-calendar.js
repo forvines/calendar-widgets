@@ -1,3 +1,5 @@
+import { ServiceError, readJson } from './service.js';
+
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
@@ -15,7 +17,7 @@ export function hasGoogleCredentials(env = {}) {
 
 export async function fetchCalendarData(env, range, fetchImpl = fetch) {
   if (!hasGoogleCredentials(env)) {
-    throw new CalendarServiceError(503, 'CALENDAR_NOT_CONFIGURED', 'Google Calendar credentials are not configured.');
+    throw new ServiceError(503, 'CALENDAR_NOT_CONFIGURED', 'Google Calendar credentials are not configured.');
   }
 
   const accessToken = await exchangeRefreshToken(env, fetchImpl);
@@ -63,7 +65,7 @@ async function exchangeRefreshToken(env, fetchImpl) {
   });
   const body = await readJson(response);
   if (!response.ok || !body.access_token) {
-    throw new CalendarServiceError(502, 'GOOGLE_AUTH_FAILED', 'Google rejected the calendar credentials.');
+    throw new ServiceError(502, 'GOOGLE_AUTH_FAILED', 'Google rejected the calendar credentials.');
   }
   return body.access_token;
 }
@@ -77,7 +79,7 @@ async function fetchAllPages(initialUrl, accessToken, fetchImpl) {
     });
     const body = await readJson(response);
     if (!response.ok) {
-      throw new CalendarServiceError(502, 'GOOGLE_CALENDAR_FAILED', 'Google Calendar data could not be loaded.');
+      throw new ServiceError(502, 'GOOGLE_CALENDAR_FAILED', 'Google Calendar data could not be loaded.');
     }
     items.push(...(Array.isArray(body.items) ? body.items : []));
     if (body.nextPageToken) {
@@ -114,20 +116,4 @@ function normalizeEvent(event, calendarId) {
     allDay,
     location: event.location || '',
   };
-}
-
-async function readJson(response) {
-  try {
-    return await response.json();
-  } catch {
-    return {};
-  }
-}
-
-export class CalendarServiceError extends Error {
-  constructor(status, code, message) {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
 }

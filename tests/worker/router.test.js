@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { handleApiRequest } from '../../worker/router.js';
-import { AviationServiceError } from '../../worker/aviation.js';
+import { ServiceError } from '../../worker/service.js';
 
 describe('Worker API router', () => {
   it('reports deployment and configured-service state', async () => {
@@ -93,7 +93,7 @@ describe('Worker API router', () => {
 
   it('maps an aviation service error to its status and code', async () => {
     const fetchAviationData = vi.fn().mockRejectedValue(
-      new AviationServiceError(503, 'AVIATION_NOT_CONFIGURED', 'CheckWX credentials are not configured.'),
+      new ServiceError(503, 'AVIATION_NOT_CONFIGURED', 'CheckWX credentials are not configured.'),
     );
     const response = await handleApiRequest(
       new Request('https://example.test/api/aviation'),
