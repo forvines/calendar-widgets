@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — DAKboard Calendar Widgets</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 48px 20px;
+      background: #0b1118;
+      color: #eef5fb;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+    }
+    main { max-width: 680px; margin: 0 auto; }
+    h1 { font-size: 24px; }
+    h2 { font-size: 17px; margin-top: 28px; }
+    p, li { color: #c8d4de; }
+    a { color: #7baaf7; }
+    .muted { color: #8fa3b5; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Privacy Policy</h1>
+    <p class="muted">Last updated: September 2026</p>
+
+    <p>
+      DAKboard Calendar Widgets ("the app") is a private, single-household
+      dashboard that displays a Google Calendar schedule and local weather on a
+      wall-mounted display. This policy describes how it handles data.
+    </p>
+
+    <h2>What the app accesses</h2>
+    <p>
+      With the account owner's authorization, the app uses read-only access to
+      Google Calendar (the <code>calendar.readonly</code> scope) to list
+      calendars and read events. It never creates, modifies, or deletes
+      calendar data.
+    </p>
+
+    <h2>How data is used</h2>
+    <ul>
+      <li>Calendar events are fetched on demand to render the schedule display.</li>
+      <li>Requests to Google are made from the app's own server (a Cloudflare
+        Worker); Google credentials are stored only as server-side secrets and
+        are never sent to the browser.</li>
+      <li>The app does not sell, share, or transmit calendar data to any third
+        party.</li>
+    </ul>
+
+    <h2>Data retention</h2>
+    <p>
+      The app does not maintain its own database. Calendar and weather data are
+      fetched transiently to render the display and are not persisted beyond the
+      lifetime of a request.
+    </p>
+
+    <h2>Third-party services</h2>
+    <p>
+      The app calls the Google Calendar API, Open-Meteo, the U.S. National
+      Weather Service, and CheckWX to retrieve schedule and weather information.
+      Their handling of data is governed by their own privacy policies.
+    </p>
+
+    <h2>Revoking access</h2>
+    <p>
+      The account owner can revoke the app's access at any time at
+      <a href="https://myaccount.google.com/permissions">Google Account
+      permissions</a>.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Questions about this policy can be directed to the account owner who
+      operates this dashboard.
+    </p>
+  </main>
+</body>
+</html>
