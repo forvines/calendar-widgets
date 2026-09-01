@@ -31,10 +31,14 @@
   --small-font-size: 10px;
   --tiny-font-size: 9px;
 
+  /* Multiplier applied to calendar event/day text. Raise to enlarge all
+     calendar text at once (1 = base, 1.2 = 20% larger). */
+  --cal-text-scale: 1.38;
+
   --corner: var(--db-corner);
   --event-radius: var(--db-event-radius);
 
   /* Easy layout tuning once this is on the real DAKboard screen. */
-  --hour-slot-min-height: 28px;
+  --hour-slot-min-height: 42px;
   /* Weekly event typography/grid are tuned in fullcalendar.css. */
 }
