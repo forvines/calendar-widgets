@@ -4,11 +4,15 @@ import { createCalendarState } from './state.js';
 import { renderCalendarFilters } from './calendar-filters.js';
 import { createMonthAccordion } from './rolling-calendar.js';
 import { createEventPopup } from './event-popup.js';
+import { installIdleFade } from './idle-fade.js';
 
 const status = document.querySelector('#calendarStatus');
 const retryButton = document.querySelector('#calendarRetry');
 const content = document.querySelector('#calendarContent');
 const reloadButton = document.querySelector('#reloadButton');
+
+// Fade the calendar toward the background photo after inactivity.
+installIdleFade(document.querySelector('#app'), config.idle);
 
 // How often the calendar silently re-fetches from the backend so edits made in
 // Google Calendar appear on a passive wall display without manual interaction.

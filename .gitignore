@@ -7,3 +7,6 @@ blob-report/
 .env
 .env.*
 !.dev.vars.example
+
+# Local-only demo background (never deployed)
+public/local-demo.css
