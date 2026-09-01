@@ -4,6 +4,8 @@ import {
   ceilingFromClouds,
   conditionsText,
   formatVisibility,
+  metarCategory,
+  metarSummary,
   periodLabel,
   windText,
 } from '../../public/widgets/aviation-core.js';
@@ -50,6 +52,27 @@ describe('aviation report formatting', () => {
     expect(formatVisibility({ text: 'Greater than 6 miles' })).toBe('>6 SM');
     expect(formatVisibility({ miles: 2.5 })).toBe('2.5 SM');
     expect(formatVisibility()).toBe('—');
+  });
+
+  it('summarizes a METAR into a compact one-line string', () => {
+    expect(metarSummary({
+      wind: { degrees: 240, speed: { kts: 8 } },
+      visibility: { miles: 10 },
+      clouds: [{ code: 'FEW', feet: 25000 }],
+    })).toBe('240° 8 kt · 10 SM · CLR');
+    expect(metarSummary({
+      wind: { degrees: 90, speed: { kts: 6 } },
+      visibility: { miles: 3 },
+      clouds: [{ code: 'OVC', feet: 1200 }],
+    })).toBe('090° 6 kt · 3 SM · 1,200ft');
+    expect(metarSummary(null)).toBe('—');
+  });
+
+  it('derives a METAR category, preferring the API flight_category', () => {
+    expect(metarCategory({ flight_category: 'IFR' })).toBe('IFR');
+    expect(metarCategory({ visibility: { miles: 10 }, clouds: [] })).toBe('VFR');
+    expect(metarCategory({ visibility: { miles: 0.5 }, clouds: [] })).toBe('LIFR');
+    expect(metarCategory(null)).toBe('—');
   });
 
   it('combines decoded conditions and handles empty reports', () => {
