@@ -45,7 +45,7 @@ The calendar has additional calendar-specific controls in `public/src/styles/the
 
 ## Calendar — current phase
 
-The calendar is still the static UI prototype and deliberately uses mock events. It currently supports:
+The calendar UI now loads normalized Google Calendar data from the Worker. It currently supports:
 
 - 7-day hour-by-hour TimeGrid view
 - horizontal swipe to advance the 7-day window by one day
@@ -163,7 +163,13 @@ and events shaped like:
 }
 ```
 
-The Google Calendar backend in a later phase will normalize Google API responses into this same shape, keeping authentication/data access separate from rendering.
+The Worker now provides the first Google Calendar backend boundary at
+`GET /api/calendar?start=<ISO timestamp>&end=<ISO timestamp>`. It exchanges the
+configured refresh token only on the server, discovers readable calendars,
+loads a date range of events, and normalizes Google responses into this same
+shape. Requests are limited to 90 days. The browser displays an explicit
+loading state while the request is active and a retryable error when Calendar
+credentials or upstream data are unavailable.
 
 
 ## Weekly calendar visual tuning

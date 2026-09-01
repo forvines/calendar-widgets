@@ -1,8 +1,13 @@
 import { errorResponse, jsonResponse } from './response.js';
+import {
+  CalendarServiceError,
+  fetchCalendarData,
+  hasGoogleCredentials,
+} from './google-calendar.js';
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-export function handleApiRequest(request, env = {}) {
+export async function handleApiRequest(request, env = {}, services = {}) {
   const url = new URL(request.url);
 
   if (!ALLOWED_METHODS.has(request.method)) {
@@ -23,19 +28,44 @@ export function handleApiRequest(request, env = {}) {
       status: 'ok',
       version: env.DEPLOYMENT_VERSION || 'development',
       services: {
-        calendarConfigured: hasValues(env, [
-          'GOOGLE_CLIENT_ID',
-          'GOOGLE_CLIENT_SECRET',
-          'GOOGLE_REFRESH_TOKEN',
-        ]),
+        calendarConfigured: hasGoogleCredentials(env),
         aviationConfigured: hasValues(env, ['CHECKWX_API_KEY']),
       },
     }, { method: request.method });
   }
 
+  if (url.pathname === '/api/calendar') {
+    const range = parseRange(url.searchParams);
+    if (!range) {
+      return errorResponse(400, 'INVALID_DATE_RANGE', 'Provide valid start and end timestamps spanning no more than 90 days.', {}, {
+        method: request.method,
+      });
+    }
+    try {
+      const loadCalendar = services.fetchCalendarData || fetchCalendarData;
+      const data = await loadCalendar(env, range);
+      return jsonResponse(data, { method: request.method });
+    } catch (error) {
+      if (error instanceof CalendarServiceError) {
+        return errorResponse(error.status, error.code, error.message, {}, { method: request.method });
+      }
+      return errorResponse(502, 'CALENDAR_SERVICE_FAILED', 'Calendar data could not be loaded.', {}, {
+        method: request.method,
+      });
+    }
+  }
+
   return errorResponse(404, 'API_ROUTE_NOT_FOUND', 'The requested API route does not exist.', {}, {
     method: request.method,
   });
+}
+
+function parseRange(params) {
+  const start = new Date(params.get('start') || '');
+  const end = new Date(params.get('end') || '');
+  const duration = end.getTime() - start.getTime();
+  if (!Number.isFinite(duration) || duration <= 0 || duration > 90 * 24 * 60 * 60 * 1000) return null;
+  return { start, end };
 }
 
 function hasValues(env, names) {

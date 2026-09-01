@@ -33,6 +33,50 @@ button {
   background: transparent;
 }
 
+.calendar-content {
+  display: contents;
+}
+
+.calendar-content[hidden],
+.calendar-status[hidden] {
+  display: none;
+}
+
+.calendar-status {
+  align-items: center;
+  align-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  justify-self: center;
+  max-width: 520px;
+  padding: 32px;
+  text-align: center;
+  width: 100%;
+}
+
+.calendar-status[data-state="error"] {
+  color: #ffc4c4;
+}
+
+.calendar-status-spinner {
+  animation: calendar-spin .8s linear infinite;
+  border: 2px solid var(--db-grid-line);
+  border-radius: 50%;
+  border-top-color: var(--db-soft);
+  height: 18px;
+  width: 18px;
+}
+
+.calendar-status[data-state="error"] .calendar-status-spinner {
+  display: none;
+}
+
+@keyframes calendar-spin {
+  to { transform: rotate(360deg); }
+}
+
 .app-toolbar,
 .calendar-panel {
   min-width: 0;
