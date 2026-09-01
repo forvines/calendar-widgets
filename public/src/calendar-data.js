@@ -1,6 +1,13 @@
 import { DAY_MS, addDays } from './date-utils.js';
 import { createMockEvents, mockCalendars } from './mock-data.js';
 
+// Reads the access token from the page URL (?k=...), so the DAKboard iframe URL
+// token is forwarded to the gated API. Returns '' outside a browser (tests).
+export function pageAccessToken() {
+  if (typeof window === 'undefined' || !window.location) return '';
+  return new URLSearchParams(window.location.search).get('k') || '';
+}
+
 export function createCalendarRange(anchor = new Date()) {
   const midnight = new Date(anchor);
   midnight.setHours(0, 0, 0, 0);
@@ -38,6 +45,8 @@ async function fetchLiveCalendarData({ fetchImpl, anchor }) {
     start: range.start.toISOString(),
     end: range.end.toISOString(),
   });
+  const token = pageAccessToken();
+  if (token) params.set('k', token);
   const response = await fetchImpl(`/api/calendar?${params}`, {
     headers: { Accept: 'application/json' },
   });

@@ -17,7 +17,12 @@ import {
   // browser.
   const REFRESH_MINUTES = 10;
 
-  const AVIATION_ENDPOINT = "/api/aviation";
+  // The access token (if any) is carried in the page URL (?k=...) by DAKboard
+  // and forwarded to the gated Worker API.
+  const ACCESS_TOKEN = new URLSearchParams(window.location.search).get("k") || "";
+  const AVIATION_ENDPOINT = ACCESS_TOKEN
+    ? `/api/aviation?k=${encodeURIComponent(ACCESS_TOKEN)}`
+    : "/api/aviation";
 
   const $ = (id) => document.getElementById(id);
 
