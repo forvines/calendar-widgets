@@ -4,3 +4,7 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REFRESH_TOKEN=
 CHECKWX_API_KEY=
+# Optional: when set, /api/calendar and /api/aviation require ?k=<this value>.
+# Leave blank locally to disable the gate; set it as a secret on the deployed
+# Worker to protect the data routes.
+ACCESS_TOKEN=

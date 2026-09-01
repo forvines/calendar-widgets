@@ -33,6 +33,8 @@ export async function handleApiRequest(request, env = {}, services = {}) {
   }
 
   if (url.pathname === '/api/calendar') {
+    const denied = enforceAccess(request, env, url);
+    if (denied) return denied;
     const range = parseRange(url.searchParams);
     if (!range) {
       return errorResponse(400, 'INVALID_DATE_RANGE', 'Provide valid start and end timestamps spanning no more than 90 days.', {}, {
@@ -48,6 +50,8 @@ export async function handleApiRequest(request, env = {}, services = {}) {
   }
 
   if (url.pathname === '/api/aviation') {
+    const denied = enforceAccess(request, env, url);
+    if (denied) return denied;
     return runService(
       () => (services.fetchAviationData || fetchAviationData)(env),
       'AVIATION_SERVICE_FAILED',
@@ -59,6 +63,35 @@ export async function handleApiRequest(request, env = {}, services = {}) {
   return errorResponse(404, 'API_ROUTE_NOT_FOUND', 'The requested API route does not exist.', {}, {
     method: request.method,
   });
+}
+
+// Access gate for the data routes. When ACCESS_TOKEN is configured (deployed),
+// the request must carry a matching ?k=<token>; otherwise it is rejected. When
+// ACCESS_TOKEN is unset (local development), the gate is disabled. /api/health
+// is intentionally left open as a liveness probe. Returns a Response to send
+// when access is denied, or null when the request may proceed.
+function enforceAccess(request, env, url) {
+  const expected = typeof env.ACCESS_TOKEN === 'string' ? env.ACCESS_TOKEN.trim() : '';
+  if (!expected) return null; // gate disabled when no token configured
+
+  const provided = url.searchParams.get('k') || '';
+  if (constantTimeEquals(provided, expected)) return null;
+
+  return errorResponse(403, 'ACCESS_DENIED', 'A valid access token is required.', {}, {
+    method: request.method,
+  });
+}
+
+// Length-independent constant-time string comparison to avoid leaking the
+// token via response timing.
+function constantTimeEquals(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  let diff = a.length ^ b.length;
+  const max = Math.max(a.length, b.length);
+  for (let i = 0; i < max; i += 1) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
 }
 
 // Runs a backend service call and turns the outcome into a JSON response. A
