@@ -8,7 +8,7 @@
  * - make event colors the primary visual emphasis
  */
 
-#weekCalendar .fc {
+.week-block-timegrid .fc {
   height: 100%;
   color: var(--text);
   font-family: var(--font-main);
@@ -25,45 +25,45 @@
 }
 
 /* Kill the light defaults from the FullCalendar base theme. */
-#weekCalendar .fc-theme-standard,
-#weekCalendar .fc-scrollgrid,
-#weekCalendar .fc-scrollgrid table,
-#weekCalendar .fc-scrollgrid-section,
-#weekCalendar .fc-scrollgrid-section > td,
-#weekCalendar .fc-timegrid,
-#weekCalendar .fc-timegrid-body,
-#weekCalendar .fc-timegrid-body table,
-#weekCalendar .fc-timegrid-slots,
-#weekCalendar .fc-timegrid-slots table,
-#weekCalendar .fc-timegrid-cols,
-#weekCalendar .fc-timegrid-cols table,
-#weekCalendar .fc-daygrid-body,
-#weekCalendar .fc-daygrid-body table {
+.week-block-timegrid .fc-theme-standard,
+.week-block-timegrid .fc-scrollgrid,
+.week-block-timegrid .fc-scrollgrid table,
+.week-block-timegrid .fc-scrollgrid-section,
+.week-block-timegrid .fc-scrollgrid-section > td,
+.week-block-timegrid .fc-timegrid,
+.week-block-timegrid .fc-timegrid-body,
+.week-block-timegrid .fc-timegrid-body table,
+.week-block-timegrid .fc-timegrid-slots,
+.week-block-timegrid .fc-timegrid-slots table,
+.week-block-timegrid .fc-timegrid-cols,
+.week-block-timegrid .fc-timegrid-cols table,
+.week-block-timegrid .fc-daygrid-body,
+.week-block-timegrid .fc-daygrid-body table {
   background: transparent !important;
 }
 
-#weekCalendar table,
-#weekCalendar td,
-#weekCalendar th {
+.week-block-timegrid table,
+.week-block-timegrid td,
+.week-block-timegrid th {
   border-color: rgba(150, 170, 188, .28) !important;
 }
 
 /* Each calendar surface is a 30%-transparent tile. The daygrid (all-day) area
    is painted once on its frame (below); painting it here too would double the
    opacity and create a darker patch. */
-#weekCalendar .fc-col-header-cell,
-#weekCalendar .fc-timegrid-axis,
-#weekCalendar .fc-timegrid-slot-label,
-#weekCalendar .fc-timegrid-col {
-  background: var(--week-tile-bg) !important;
+.week-block-timegrid .fc-col-header-cell,
+.week-block-timegrid .fc-timegrid-axis,
+.week-block-timegrid .fc-timegrid-slot-label,
+.week-block-timegrid .fc-timegrid-col {
+  background: var(--week-expanded-tile-bg) !important;
 }
 
 /* Header: Google-like weekday + date hierarchy. */
-#weekCalendar .fc-col-header-cell {
+.week-block-timegrid .fc-col-header-cell {
   border-bottom-color: var(--border) !important;
 }
 
-#weekCalendar .fc-col-header-cell-cushion {
+.week-block-timegrid .fc-col-header-cell-cushion {
   display: block;
   width: 100%;
   padding: 4px 2px 5px;
@@ -71,7 +71,7 @@
   text-decoration: none;
 }
 
-#weekCalendar .week-day-heading {
+.week-block-timegrid .week-day-heading {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -80,7 +80,7 @@
   min-height: 31px;
 }
 
-#weekCalendar .week-day-name {
+.week-block-timegrid .week-day-name {
   color: var(--muted);
   font-size: 9px;
   font-weight: 800;
@@ -88,7 +88,7 @@
   text-transform: uppercase;
 }
 
-#weekCalendar .week-day-number {
+.week-block-timegrid .week-day-number {
   display: grid;
   place-items: center;
   min-width: 22px;
@@ -101,72 +101,72 @@
   line-height: 1;
 }
 
-#weekCalendar .week-day-heading.is-today .week-day-name {
+.week-block-timegrid .week-day-heading.is-today .week-day-name {
   color: #a9c8f8;
 }
 
-#weekCalendar .week-day-heading.is-today .week-day-number {
+.week-block-timegrid .week-day-heading.is-today .week-day-number {
   background: #7baaf7;
   color: #081018;
 }
 
 /* Time axis and grid. */
-#weekCalendar .fc-timegrid-axis,
-#weekCalendar .fc-timegrid-slot-label {
-  background: var(--week-tile-bg) !important;
+.week-block-timegrid .fc-timegrid-axis,
+.week-block-timegrid .fc-timegrid-slot-label {
+  background: var(--week-expanded-tile-bg) !important;
 }
 
-#weekCalendar .fc-timegrid-axis-cushion,
-#weekCalendar .fc-timegrid-slot-label-cushion,
-#weekCalendar .fc-timegrid-axis-frame {
+.week-block-timegrid .fc-timegrid-axis-cushion,
+.week-block-timegrid .fc-timegrid-slot-label-cushion,
+.week-block-timegrid .fc-timegrid-axis-frame {
   color: var(--muted);
   font-size: 8.5px;
   font-weight: 650;
 }
 
-#weekCalendar .fc-timegrid-slot-label-cushion {
+.week-block-timegrid .fc-timegrid-slot-label-cushion {
   padding: 0 5px;
 }
 
-#weekCalendar .fc-timegrid-slot {
+.week-block-timegrid .fc-timegrid-slot {
   min-height: var(--hour-slot-min-height);
   border-color: rgba(150, 170, 188, .17) !important;
 }
 
-#weekCalendar .fc-timegrid-slot-minor {
+.week-block-timegrid .fc-timegrid-slot-minor {
   border-top-style: dotted;
 }
 
-#weekCalendar .fc-timegrid-col.fc-day-today,
-#weekCalendar .fc-day-today {
+.week-block-timegrid .fc-timegrid-col.fc-day-today,
+.week-block-timegrid .fc-day-today {
   background: var(--today-bg) !important;
 }
 
 /* All-day row uses the same tile language without becoming a bright stripe. */
-#weekCalendar .fc-daygrid-body,
-#weekCalendar .fc-daygrid-day,
-#weekCalendar .fc-timegrid-divider,
-#weekCalendar .fc-scrollgrid-section-header > td,
-#weekCalendar .fc-scrollgrid-section-body > td {
+.week-block-timegrid .fc-daygrid-body,
+.week-block-timegrid .fc-daygrid-day,
+.week-block-timegrid .fc-timegrid-divider,
+.week-block-timegrid .fc-scrollgrid-section-header > td,
+.week-block-timegrid .fc-scrollgrid-section-body > td {
   background-color: transparent !important;
 }
 
-#weekCalendar .fc-daygrid-day-frame,
-#weekCalendar .fc-timegrid-col-frame {
-  background: var(--week-tile-bg);
+.week-block-timegrid .fc-daygrid-day-frame,
+.week-block-timegrid .fc-timegrid-col-frame {
+  background: var(--week-expanded-tile-bg);
 }
 
-#weekCalendar .fc-timegrid-divider {
+.week-block-timegrid .fc-timegrid-divider {
   padding: 0;
   border-color: var(--border) !important;
 }
 
-#weekCalendar .fc-timegrid-axis-cushion.fc-scrollgrid-shrink-cushion {
+.week-block-timegrid .fc-timegrid-axis-cushion.fc-scrollgrid-shrink-cushion {
   padding-inline: 4px;
 }
 
 /* Events: Google-like solid calendar color, slightly translucent over the photo. */
-#weekCalendar .fc-event {
+.week-block-timegrid .fc-event {
   border: 0 !important;
   border-left: 3px solid var(--event-color, transparent) !important;
   border-radius: 3px;
@@ -175,14 +175,14 @@
   overflow: hidden;
 }
 
-#weekCalendar .fc-event-main {
+.week-block-timegrid .fc-event-main {
   padding: 0 3px;
   color: inherit !important;
 }
 
 /* Our own event markup (see eventContent in week-calendar.js). FullCalendar 7
    uses hashed class names, so we style classes we control instead. */
-#weekCalendar .wk-event {
+.week-block-timegrid .wk-event {
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -190,8 +190,8 @@
   overflow: hidden;
 }
 
-#weekCalendar .wk-event-time {
-  font-size: 9.5px;
+.week-block-timegrid .wk-event-time {
+  font-size: 8.5px;
   font-weight: 700;
   line-height: 1.1;
   opacity: .85;
@@ -200,49 +200,49 @@
   text-overflow: ellipsis;
 }
 
-#weekCalendar .wk-event-title {
-  font-size: 11px;
+.week-block-timegrid .wk-event-title {
+  font-size: 9.5px;
   font-weight: 650;
   line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-#weekCalendar .fc-daygrid-event {
+.week-block-timegrid .fc-daygrid-event {
   margin: 1px 2px;
 }
 
-#weekCalendar .fc-daygrid-event .fc-event-main {
+.week-block-timegrid .fc-daygrid-event .fc-event-main {
   padding-block: 2px;
 }
 
 /* Current time is intentionally stronger than the grid. */
-#weekCalendar .fc-timegrid-now-indicator-line {
+.week-block-timegrid .fc-timegrid-now-indicator-line {
   border-width: 2px 0 0;
 }
 
-#weekCalendar .fc-timegrid-now-indicator-arrow {
+.week-block-timegrid .fc-timegrid-now-indicator-arrow {
   border-width: 5px 0 5px 6px;
 }
 
 /* Remove default focus/hover treatments that are visually noisy on DAKboard. */
-#weekCalendar a,
-#weekCalendar a:visited {
+.week-block-timegrid a,
+.week-block-timegrid a:visited {
   color: inherit;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  #weekCalendar .fc-event:hover {
+  .week-block-timegrid .fc-event:hover {
     filter: brightness(1.06);
   }
 }
 
 /* Hide scrollbars but preserve native touch/mouse scrolling. */
-#weekCalendar * {
+.week-block-timegrid * {
   scrollbar-width: none;
 }
 
-#weekCalendar *::-webkit-scrollbar {
+.week-block-timegrid *::-webkit-scrollbar {
   width: 0;
   height: 0;
   display: none;

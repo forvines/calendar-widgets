@@ -1,4 +1,6 @@
-.rolling-scroll {
+/* Accordion month: a single scrolling list of week blocks. */
+.month-accordion {
+  height: 100%;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -7,10 +9,62 @@
   background: transparent;
 }
 
-.rolling-scroll::-webkit-scrollbar {
+.month-accordion::-webkit-scrollbar {
   display: none;
   width: 0;
 }
+
+.week-block {
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--corner);
+  overflow: hidden;
+  background: transparent;
+}
+
+.week-block-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 9px;
+  border: 0;
+  background: var(--toolbar-bg);
+  color: var(--soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.week-block-header.is-current {
+  color: #a9c8f8;
+}
+
+.week-block-caret {
+  flex: 0 0 auto;
+  font-size: 10px;
+  opacity: .8;
+}
+
+/* Soften the expand: fade and slide the detailed grid in rather than snapping.
+   (Height itself can't be CSS-animated to a content-sized value reliably, so we
+   animate opacity/transform of the revealed content instead.) */
+.week-block-timegrid {
+  min-height: 0;
+  animation: week-expand .2s ease both;
+}
+
+@keyframes week-expand {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.week-block.is-expanded .week-block-header {
+  border-bottom: 1px solid var(--border);
+}
+
 
 .rolling-weekdays {
   position: sticky;
