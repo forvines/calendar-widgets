@@ -31,25 +31,57 @@ describe('calendar API data loading', () => {
       anchor: new Date('2026-09-08T12:00:00Z'),
     });
 
+    expect(data.source).toBe('live');
     expect(data.events[0].start).toBeInstanceOf(Date);
     expect(data.events[0].end).toBeInstanceOf(Date);
     expect(fetchImpl.mock.calls[0][0]).toMatch(/^\/api\/calendar\?start=/);
   });
 
   it('surfaces safe API errors for the loading state', async () => {
+    // A genuine live failure (not a missing-credentials case) must reach the
+    // caller so the retryable error state is shown rather than silently
+    // masked by mock data.
     const fetchImpl = vi.fn().mockResolvedValue(json({
-      error: { code: 'CALENDAR_NOT_CONFIGURED', message: 'Calendar is not configured.' },
-    }, 503));
+      error: { code: 'GOOGLE_AUTH_FAILED', message: 'Google rejected the credentials.' },
+    }, 502));
 
     await expect(loadCalendarData({ fetchImpl })).rejects.toMatchObject({
       name: 'Error',
-      code: 'CALENDAR_NOT_CONFIGURED',
-      status: 503,
-      message: 'Calendar is not configured.',
+      code: 'GOOGLE_AUTH_FAILED',
+      status: 502,
+      message: 'Google rejected the credentials.',
     });
     await expect(loadCalendarData({
       fetchImpl: vi.fn().mockResolvedValue(json({ nope: true })),
     })).rejects.toBeInstanceOf(CalendarDataError);
+  });
+
+  it('falls back to mock data when calendar credentials are not configured', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json({
+      error: { code: 'CALENDAR_NOT_CONFIGURED', message: 'Calendar is not configured.' },
+    }, 503));
+    const mockProvider = vi.fn().mockReturnValue({
+      calendars: [{ id: 'demo', name: 'Demo' }],
+      events: [{ id: 'demo:1', calendarId: 'demo', title: 'Sample', start: new Date() }],
+    });
+
+    const data = await loadCalendarData({ fetchImpl, mockProvider });
+
+    expect(data.source).toBe('mock');
+    expect(data.calendars).toEqual([{ id: 'demo', name: 'Demo' }]);
+    expect(data.events).toHaveLength(1);
+    expect(mockProvider).toHaveBeenCalledOnce();
+  });
+
+  it('does not fall back to mock data for other calendar errors', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json({
+      error: { code: 'GOOGLE_CALENDAR_FAILED', message: 'Upstream failed.' },
+    }, 502));
+    const mockProvider = vi.fn();
+
+    await expect(loadCalendarData({ fetchImpl, mockProvider }))
+      .rejects.toMatchObject({ code: 'GOOGLE_CALENDAR_FAILED' });
+    expect(mockProvider).not.toHaveBeenCalled();
   });
 });
 

@@ -103,6 +103,22 @@ button {
   letter-spacing: .11em;
 }
 
+.sample-badge {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 196, 121, .4);
+  border-radius: 999px;
+  background: rgba(255, 138, 101, .16);
+  color: #ffc479;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .09em;
+}
+
+.sample-badge[hidden] {
+  display: none;
+}
+
 .calendar-filters {
   display: flex;
   align-items: center;
