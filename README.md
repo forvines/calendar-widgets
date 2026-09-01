@@ -8,14 +8,14 @@ When the repository is deployed at the root of the Cloudflare site:
 
 - `/` — custom calendar prototype
 - `/widgets/weather.html` — Bonney Lake weather + AQI widget
-- `/widgets/aviation.html` — KPLU METAR + KTCM TAF widget
+- `/widgets/aviation-strip.html` — METAR/TAF strip (KPLU, KRNT, KTIW, KCLS + KTCM TAF)
 
 This means a deployment such as:
 
 ```text
 https://calendar-widgets.example.workers.dev/
 https://calendar-widgets.example.workers.dev/widgets/weather.html
-https://calendar-widgets.example.workers.dev/widgets/aviation.html
+https://calendar-widgets.example.workers.dev/widgets/aviation-strip.html
 ```
 
 Each page is standalone and can be embedded in its own DAKboard widget with an iframe.
@@ -76,11 +76,13 @@ It uses Open-Meteo / Open-Meteo Air Quality and NWS endpoints directly from the 
 
 ## Aviation
 
-There are two aviation displays, both showing KPLU METAR + KTCM TAF:
-`public/widgets/aviation.html` (the full multi-panel layout) and
-`public/widgets/aviation-strip.html` (a compact strip for a wide, short tile,
-with tap-to-expand per-station detail). Both share the report helpers in
-`public/widgets/aviation-core.js`.
+The aviation display is `public/widgets/aviation-strip.html`: a compact strip
+sized for a wide, short DAKboard tile. It shows one row of color-coded
+flight-category pills for the METAR stations (KPLU, KRNT, KTIW, KCLS) and one
+row for the KTCM TAF as a horizontal timeline of category pills labeled with
+their transition times. Both rows scroll sideways on overflow. Its entry point
+is `public/widgets/aviation-strip.js`, with report helpers in
+`public/widgets/aviation-core.js` and `?mock=1` for quota-free preview.
 
 Aviation data comes from **aviationweather.gov** (the NWS Aviation Weather
 Center): free, no API key, 100 requests/minute. The browser calls
@@ -110,7 +112,7 @@ Then open:
 ```text
 http://localhost:8787/
 http://localhost:8787/widgets/weather.html
-http://localhost:8787/widgets/aviation.html
+http://localhost:8787/widgets/aviation-strip.html
 ```
 
 The Worker currently provides a non-secret deployment check at
