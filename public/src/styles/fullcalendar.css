@@ -120,7 +120,7 @@
 #weekCalendar .fc-timegrid-slot-label-cushion,
 #weekCalendar .fc-timegrid-axis-frame {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 8.5px;
   font-weight: 650;
 }
 
@@ -169,27 +169,43 @@
 #weekCalendar .fc-event {
   border: 0 !important;
   border-left: 3px solid var(--event-color, transparent) !important;
-  border-radius: var(--event-radius);
+  border-radius: 3px;
   box-shadow: none !important;
   cursor: pointer;
   overflow: hidden;
 }
 
 #weekCalendar .fc-event-main {
-  padding: 1px 3px;
+  padding: 0 3px;
   color: inherit !important;
 }
 
-#weekCalendar .fc-event-time {
-  font-size: 7.5px;
-  font-weight: 750;
-  line-height: 1.08;
+/* Our own event markup (see eventContent in week-calendar.js). FullCalendar 7
+   uses hashed class names, so we style classes we control instead. */
+#weekCalendar .wk-event {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
-#weekCalendar .fc-event-title {
-  font-size: 8px;
+#weekCalendar .wk-event-time {
+  font-size: 9.5px;
   font-weight: 700;
-  line-height: 1.10;
+  line-height: 1.1;
+  opacity: .85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#weekCalendar .wk-event-title {
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #weekCalendar .fc-daygrid-event {

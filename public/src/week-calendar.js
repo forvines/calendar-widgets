@@ -1,13 +1,27 @@
 import { startOfWeek } from './date-utils.js';
+import { hexToRgba, readableTextColor } from './color-utils.js';
+
+function spansMultipleDays(event) {
+  if (!event.end) return false;
+  const startDay = new Date(event.start);
+  startDay.setHours(0, 0, 0, 0);
+  const endDay = new Date(event.end);
+  endDay.setHours(0, 0, 0, 0);
+  return endDay.getTime() > startDay.getTime();
+}
 
 function toFullCalendarEvent(event, calendarMap) {
   const calendar = calendarMap.get(event.calendarId);
+  // All-day events, and timed events that span more than one calendar day, are
+  // shown as bars in the top all-day row rather than inside the hour grid. The
+  // original event (with real start/end times) is preserved for the popup.
+  const displayAllDay = event.allDay || spansMultipleDays(event);
   return {
     id: event.id,
     title: event.title,
     start: event.start,
     end: event.end,
-    allDay: event.allDay,
+    allDay: displayAllDay,
     backgroundColor: calendar?.color,
     borderColor: calendar?.color,
     textColor: readableTextColor(calendar?.color),
@@ -61,7 +75,6 @@ export function createWeekCalendar({
     },
     headerToolbar: false,
     firstDay: config.display.firstDay,
-    timeZone: config.timeZone,
     height: '100%',
     expandRows: true,
     allDaySlot: config.display.showAllDayEvents,
@@ -73,19 +86,44 @@ export function createWeekCalendar({
     scrollTime: `${String(config.week.initialScrollHour).padStart(2, '0')}:00:00`,
     scrollTimeReset: false,
     dayHeaderContent: renderDayHeader,
-    slotLabelFormat: { hour: 'numeric' },
-    eventTimeFormat: { hour: 'numeric', minute: '2-digit' },
+    slotLabelFormat: { hour: '2-digit', hour12: false },
+    eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
     slotMinHeight: config.week.slotMinHeight,
     eventMinHeight: 18,
     eventShortHeight: 28,
-    slotEventOverlap: true,
+    slotEventOverlap: false,
     eventOrderStrict: true,
+    // FullCalendar 7 ships hashed CSS class names, so styling the default event
+    // internals is unreliable. Render our own markup with stable classes
+    // (wk-event-*) that fullcalendar.css can target directly.
+    eventContent(arg) {
+      const wrap = document.createElement('div');
+      wrap.className = 'wk-event';
+
+      if (arg.timeText) {
+        const time = document.createElement('span');
+        time.className = 'wk-event-time';
+        time.textContent = arg.timeText;
+        wrap.appendChild(time);
+      }
+
+      const title = document.createElement('span');
+      title.className = 'wk-event-title';
+      title.textContent = arg.event.title;
+      wrap.appendChild(title);
+
+      return { domNodes: [wrap] };
+    },
     eventDidMount(info) {
       const color = info.event.extendedProps.calendarColor;
       if (!color) return;
       info.el.style.setProperty('--event-color', color);
       info.el.style.setProperty('background-color', hexToRgba(color, .88), 'important');
       info.el.style.setProperty('color', readableTextColor(color), 'important');
+      // FullCalendar 7 hashes class names, so style the actual background-
+      // carrying element here rather than relying on a .fc-event selector.
+      info.el.style.setProperty('border-radius', '3px', 'important');
+      info.el.style.setProperty('overflow', 'hidden', 'important');
     },
     events: [],
     datesSet(info) {
@@ -113,12 +151,23 @@ export function createWeekCalendar({
   refreshEvents();
   installSwipeNavigation(element, calendar, config.week.swipeIncrementDays);
 
+  // v6's global build injects CSS asynchronously; the calendar may render
+  // before its container has final dimensions. Force a re-layout once the
+  // current frame settles so the grid paints correctly on first load.
+  requestAnimationFrame(() => calendar.updateSize());
+
   return {
     nextDay() {
       calendar.incrementDate({ days: config.week.swipeIncrementDays });
     },
     previousDay() {
       calendar.incrementDate({ days: -config.week.swipeIncrementDays });
+    },
+    nextWeek() {
+      calendar.incrementDate({ days: 7 });
+    },
+    previousWeek() {
+      calendar.incrementDate({ days: -7 });
     },
     today() {
       calendar.gotoDate(startOfWeek());
@@ -144,27 +193,6 @@ function renderDayHeader(arg) {
       </span>
     `,
   };
-}
-
-function hexToRgba(hex, alpha) {
-  if (!hex || typeof hex !== 'string') return `rgba(75, 95, 115, ${alpha})`;
-  const value = hex.replace('#', '').trim();
-  if (!/^[0-9a-f]{6}$/i.test(value)) return hex;
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function readableTextColor(hex) {
-  if (!hex || typeof hex !== 'string') return '#eef5fb';
-  const value = hex.replace('#', '').trim();
-  if (!/^[0-9a-f]{6}$/i.test(value)) return '#eef5fb';
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return luminance > .67 ? '#081018' : '#ffffff';
 }
 
 function minutesToDuration(minutes) {

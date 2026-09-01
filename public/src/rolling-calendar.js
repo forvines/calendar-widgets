@@ -1,4 +1,5 @@
 import { addDays, startOfWeek } from './date-utils.js';
+import { hexToRgba, readableTextColor } from './color-utils.js';
 
 function sameCalendarDay(a, b) {
   return a.getFullYear() === b.getFullYear()
@@ -34,8 +35,9 @@ function formatMonth(date) {
 function formatEventTime(event) {
   if (event.allDay) return '';
   return new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: event.start.getMinutes() ? '2-digit' : undefined,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   }).format(event.start);
 }
 
@@ -110,15 +112,23 @@ export function createRollingCalendar({
     const dayEvents = events
       .filter(event => currentVisibleIds.has(event.calendarId))
       .filter(event => eventTouchesDay(event, day))
-      .sort((a, b) => a.start - b.start);
+      .sort((a, b) => {
+        // All-day (and multi-day) events sit at the top of the day, then timed
+        // events in chronological order.
+        if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+        return a.start - b.start;
+      });
 
-    const shown = dayEvents.slice(0, config.rolling.maxEventsPerDay);
-    for (const event of shown) {
+    for (const event of dayEvents) {
       const pill = document.createElement('button');
       pill.type = 'button';
       pill.className = 'rolling-event';
       const calendar = calendarMap.get(event.calendarId);
-      pill.style.setProperty('--event-color', calendar?.color || '#7baaf7');
+      const color = calendar?.color || '#7baaf7';
+      const textColor = readableTextColor(color);
+      pill.style.setProperty('--event-color', color);
+      pill.style.setProperty('background-color', hexToRgba(color, 0.88));
+      pill.style.setProperty('color', textColor);
 
       const eventTime = formatEventTime(event);
       pill.innerHTML = eventTime
@@ -127,13 +137,6 @@ export function createRollingCalendar({
 
       pill.addEventListener('click', () => onEventClick(event));
       dayCell.appendChild(pill);
-    }
-
-    if (dayEvents.length > shown.length) {
-      const more = document.createElement('div');
-      more.className = 'rolling-more';
-      more.textContent = `+${dayEvents.length - shown.length} more`;
-      dayCell.appendChild(more);
     }
 
     return dayCell;

@@ -71,9 +71,9 @@ function defaultMockProvider(anchor) {
 }
 
 function normalizeEvent(event) {
-  const start = new Date(event.start);
-  const end = event.end ? new Date(event.end) : null;
-  if (!event.id || !event.calendarId || Number.isNaN(start.getTime())) return null;
+  const start = parseEventDate(event.start, event.allDay);
+  const end = event.end ? parseEventDate(event.end, event.allDay) : null;
+  if (!event.id || !event.calendarId || !start || Number.isNaN(start.getTime())) return null;
   return {
     ...event,
     start,
@@ -81,6 +81,19 @@ function normalizeEvent(event) {
     allDay: Boolean(event.allDay),
     location: event.location || '',
   };
+}
+
+// Timed events carry a full timestamp with offset and parse to an absolute
+// instant. All-day events are date-only (e.g. "2026-09-07"); parsing that
+// string directly yields UTC midnight, which in a negative-offset local zone
+// lands on the previous evening and makes the event appear on the wrong (and an
+// extra) day. Appending a local time component forces local-midnight parsing.
+function parseEventDate(value, allDay) {
+  if (value == null) return null;
+  if (allDay && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T00:00:00`);
+  }
+  return new Date(value);
 }
 
 async function readJson(response) {

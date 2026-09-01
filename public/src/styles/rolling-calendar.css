@@ -42,7 +42,7 @@
   z-index: 7;
   padding: 5px 7px 4px;
   border-bottom: 1px solid var(--border);
-  background: rgba(13, 21, 30, .45);
+  background: var(--tile-bg);
   color: var(--soft);
   font-size: 10px;
   font-weight: 850;
@@ -61,7 +61,7 @@
   min-width: 0;
   padding: 4px 3px 5px;
   border-right: 1px solid var(--grid-line);
-  background: rgba(13, 21, 30, .45);
+  background: var(--tile-bg);
 }
 
 .rolling-day:last-child {
@@ -69,7 +69,7 @@
 }
 
 .rolling-day.is-today {
-  background: rgba(39, 78, 125, .50);
+  background: var(--today-bg);
 }
 
 .rolling-day-number {
@@ -96,11 +96,10 @@
   width: 100%;
   min-width: 0;
   margin: 0 0 2px;
-  padding: 2px 3px;
+  padding: 2px 4px;
   border: 0;
-  border-left: 3px solid var(--event-color);
   border-radius: 3px;
-  background: rgba(13, 21, 30, .70);
+  background: var(--event-color);
   color: var(--text);
   font-size: 9px;
   line-height: 1.15;
@@ -117,7 +116,8 @@
 
 .rolling-event-time {
   flex: 0 0 auto;
-  color: var(--soft);
+  color: inherit;
+  opacity: .8;
   font-size: 8px;
   font-weight: 800;
 }
