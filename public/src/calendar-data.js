@@ -1,9 +1,9 @@
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { DAY_MS, addDays } from './date-utils.js';
 
 export function createCalendarRange(anchor = new Date()) {
-  const start = new Date(anchor);
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - 7);
+  const midnight = new Date(anchor);
+  midnight.setHours(0, 0, 0, 0);
+  const start = addDays(midnight, -7);
 
   const end = new Date(start.getTime() + 90 * DAY_MS);
   return { start, end };

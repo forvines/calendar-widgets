@@ -1,3 +1,5 @@
+import { startOfWeek } from './date-utils.js';
+
 export const mockCalendars = [
   { id: 'family', name: 'Family', color: '#7baaf7', defaultVisible: true, order: 10 },
   { id: 'caiden', name: 'Caiden', color: '#f28b82', defaultVisible: true, order: 20 },
@@ -7,13 +9,6 @@ export const mockCalendars = [
   { id: 'forrest', name: 'Forrest', color: '#46bdc6', defaultVisible: true, order: 60 },
   { id: 'flight', name: 'Flight Instruction', color: '#ff8a65', defaultVisible: true, order: 70 },
 ];
-
-function startOfWeek(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - d.getDay());
-  return d;
-}
 
 function atDay(weekStart, dayOffset, hour = 0, minute = 0) {
   const d = new Date(weekStart);
