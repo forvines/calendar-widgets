@@ -1,7 +1,7 @@
 function formatEventRange(event) {
   if (event.allDay) return 'All day';
 
-  const options = { hour: 'numeric', minute: '2-digit' };
+  const options = { hour: '2-digit', minute: '2-digit', hour12: false };
   const start = new Intl.DateTimeFormat('en-US', options).format(event.start);
   const end = event.end
     ? new Intl.DateTimeFormat('en-US', options).format(event.end)

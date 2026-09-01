@@ -66,8 +66,8 @@ function initializeCalendar(data) {
     },
   );
 
-  document.querySelector('#prevDay').onclick = () => weekCalendar.previousDay();
-  document.querySelector('#nextDay').onclick = () => weekCalendar.nextDay();
+  document.querySelector('#prevDay').onclick = () => weekCalendar.previousWeek();
+  document.querySelector('#nextDay').onclick = () => weekCalendar.nextWeek();
   document.querySelector('#todayButton').onclick = () => weekCalendar.today();
 }
 

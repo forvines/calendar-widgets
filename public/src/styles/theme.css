@@ -7,6 +7,12 @@
   --tile-bg-strong: var(--db-tile-strong);
   --toolbar-bg: var(--db-toolbar-bg);
 
+  /* Per-view day-surface transparency. The week grid is intentionally more
+     transparent (photo shows through more) than the month grid. Tune these two
+     alpha values to taste; lower alpha = more transparent. */
+  --week-tile-bg: rgba(13, 21, 30, .48);
+  --month-tile-bg: rgba(13, 21, 30, .60);
+
   --border: var(--db-border);
   --grid-line: var(--db-grid-line);
   --grid-line-soft: var(--db-grid-line-soft);

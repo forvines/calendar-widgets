@@ -48,14 +48,14 @@
   border-color: rgba(150, 170, 188, .28) !important;
 }
 
-/* Each calendar surface is a 30%-transparent tile. */
+/* Each calendar surface is a 30%-transparent tile. The daygrid (all-day) area
+   is painted once on its frame (below); painting it here too would double the
+   opacity and create a darker patch. */
 #weekCalendar .fc-col-header-cell,
 #weekCalendar .fc-timegrid-axis,
 #weekCalendar .fc-timegrid-slot-label,
-#weekCalendar .fc-timegrid-col,
-#weekCalendar .fc-daygrid-day,
-#weekCalendar .fc-daygrid-body-natural .fc-daygrid-day-events {
-  background: var(--tile-bg) !important;
+#weekCalendar .fc-timegrid-col {
+  background: var(--week-tile-bg) !important;
 }
 
 /* Header: Google-like weekday + date hierarchy. */
@@ -113,14 +113,14 @@
 /* Time axis and grid. */
 #weekCalendar .fc-timegrid-axis,
 #weekCalendar .fc-timegrid-slot-label {
-  background: var(--tile-bg) !important;
+  background: var(--week-tile-bg) !important;
 }
 
 #weekCalendar .fc-timegrid-axis-cushion,
 #weekCalendar .fc-timegrid-slot-label-cushion,
 #weekCalendar .fc-timegrid-axis-frame {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 8.5px;
   font-weight: 650;
 }
 
@@ -153,7 +153,7 @@
 
 #weekCalendar .fc-daygrid-day-frame,
 #weekCalendar .fc-timegrid-col-frame {
-  background: var(--tile-bg);
+  background: var(--week-tile-bg);
 }
 
 #weekCalendar .fc-timegrid-divider {
@@ -169,27 +169,43 @@
 #weekCalendar .fc-event {
   border: 0 !important;
   border-left: 3px solid var(--event-color, transparent) !important;
-  border-radius: var(--event-radius);
+  border-radius: 3px;
   box-shadow: none !important;
   cursor: pointer;
   overflow: hidden;
 }
 
 #weekCalendar .fc-event-main {
-  padding: 1px 3px;
+  padding: 0 3px;
   color: inherit !important;
 }
 
-#weekCalendar .fc-event-time {
-  font-size: 7.5px;
-  font-weight: 750;
-  line-height: 1.08;
+/* Our own event markup (see eventContent in week-calendar.js). FullCalendar 7
+   uses hashed class names, so we style classes we control instead. */
+#weekCalendar .wk-event {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
-#weekCalendar .fc-event-title {
-  font-size: 8px;
+#weekCalendar .wk-event-time {
+  font-size: 9.5px;
   font-weight: 700;
-  line-height: 1.10;
+  line-height: 1.1;
+  opacity: .85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#weekCalendar .wk-event-title {
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #weekCalendar .fc-daygrid-event {
