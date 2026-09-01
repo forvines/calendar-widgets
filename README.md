@@ -76,25 +76,23 @@ It uses Open-Meteo / Open-Meteo Air Quality and NWS endpoints directly from the 
 
 ## Aviation
 
-`public/widgets/aviation.html` contains the current KPLU METAR / KTCM TAF display using CheckWX. Its browser entry point is `public/widgets/aviation.js`, with independently testable report helpers in `public/widgets/aviation-core.js`.
+There are two aviation displays, both showing KPLU METAR + KTCM TAF:
+`public/widgets/aviation.html` (the full multi-panel layout) and
+`public/widgets/aviation-strip.html` (a compact strip for a wide, short tile,
+with tap-to-expand per-station detail). Both share the report helpers in
+`public/widgets/aviation-core.js`.
 
-The CheckWX API key is held server-side by the Cloudflare Worker and is never
-sent to the browser. The widget calls `GET /api/aviation`, and the Worker
-proxies decoded METAR and TAF for the server-configured stations (see
-`STATIONS` in `worker/aviation.js`).
+Aviation data comes from **aviationweather.gov** (the NWS Aviation Weather
+Center): free, no API key, 100 requests/minute. The browser calls
+`GET /api/aviation` and the Worker fetches server-to-server (the AWC API does
+not allow browser CORS) and normalizes the response. No credential is required;
+a `CHECKWX_API_KEY`, if present, is ignored.
 
-Provide the key as a Cloudflare secret, not a plaintext var:
-
-```bash
-# Production / deployed Worker
-npx wrangler secret put CHECKWX_API_KEY
-
-# Local development: add it to .dev.vars (git-ignored)
-echo 'CHECKWX_API_KEY=your-key-here' >> .dev.vars
-```
-
-Without the secret, `/api/aviation` returns `AVIATION_NOT_CONFIGURED` and the
-widget shows a clear "not configured" message rather than failing silently.
+The Worker caches each report type to be a polite API citizen: METAR for 30
+minutes and TAF for 4 hours (see `TTL_SECONDS` in `worker/aviation.js`). The
+client refreshes METAR on interaction, bounded by a 5-minute floor. Stations
+are configured server-side in `STATIONS`; `/api/aviation` accepts an optional
+`type=metar|taf` and `force=1`.
 
 ## Local development
 

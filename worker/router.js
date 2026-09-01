@@ -1,7 +1,7 @@
 import { errorResponse, jsonResponse } from './response.js';
 import { ServiceError } from './service.js';
 import { fetchCalendarData, hasGoogleCredentials } from './google-calendar.js';
-import { fetchAviationData, hasCheckwxCredentials, createCacheStore } from './aviation.js';
+import { fetchAviationData, hasCheckwxCredentials, createCacheStore, createLayeredStore } from './aviation.js';
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -55,10 +55,11 @@ export async function handleApiRequest(request, env = {}, services = {}) {
     const typeParam = url.searchParams.get('type');
     const type = (typeParam === 'metar' || typeParam === 'taf') ? typeParam : undefined;
     const force = url.searchParams.get('force') === '1';
-    // Use the Cloudflare Cache API as the durable per-report store when
-    // available (production); tests inject their own via services.
-    const store = services.aviationStore
-      || (typeof caches !== 'undefined' && caches.default ? createCacheStore(caches.default) : undefined);
+    // Two-tier store: an in-isolate memory cache backed by the durable Cache
+    // API at the edge. Works in dev (memory) and persists in production.
+    const backing = (typeof caches !== 'undefined' && caches.default)
+      ? createCacheStore(caches.default) : null;
+    const store = services.aviationStore || createLayeredStore(backing);
     return runService(
       () => (services.fetchAviationData || fetchAviationData)(env, { type, force, store }),
       'AVIATION_SERVICE_FAILED',
