@@ -1,26 +1,29 @@
 import { ServiceError, readJson } from './service.js';
+import { normalizeMetar, normalizeTaf } from './aviation-awc.js';
 
-const CHECKWX_API = 'https://api.checkwx.com/v2';
+// Aviation weather comes from aviationweather.gov (NWS Aviation Weather Center):
+// free, no API key, 100 requests/minute, and the authoritative source. Requests
+// are made server-to-server from the Worker (AWC does not allow browser CORS)
+// and normalized to the shape aviation-core.js expects.
+const AWC_API = 'https://aviationweather.gov/api/data';
 
-// Server-side station configuration. These are defined on the server, not taken
-// from the client request: the Worker holds a paid CheckWX key, so accepting
-// arbitrary station codes from the browser would turn this route into an open
-// relay for that credential. To add or change stations, edit this list.
+// Server-side station configuration. Defined on the server so the widget cannot
+// request arbitrary stations. To add or change stations, edit this list.
 export const STATIONS = {
   metar: ['KPLU'],
   taf: ['KTCM'],
 };
 
-// CheckWX allows only 200 requests/day, so each report type is cached and only
-// refetched when its cached copy is older than its TTL. METAR changes hourly
-// (30-min freshness is plenty); TAF is issued every ~6 hours (4-hr is plenty).
-// An interaction-triggered force refresh still will not refetch a copy younger
-// than FORCE_FLOOR_SECONDS, so rapid taps cannot burn the daily budget.
+// Per-report caching keeps the widget a polite API citizen (and would cap usage
+// even if the source ever imposed a hard quota). METAR changes hourly (30-min
+// freshness is plenty); TAF is issued every ~6 hours (4-hr is plenty). A forced
+// (interaction) refresh will not refetch a copy younger than FORCE_FLOOR.
 export const TTL_SECONDS = { metar: 30 * 60, taf: 4 * 60 * 60 };
 export const FORCE_FLOOR_SECONDS = 5 * 60;
 
-export function hasCheckwxCredentials(env = {}) {
-  return typeof env.CHECKWX_API_KEY === 'string' && env.CHECKWX_API_KEY.trim().length > 0;
+// Aviation needs no credential. A CHECKWX_API_KEY, if present, is ignored.
+export function hasCheckwxCredentials() {
+  return true;
 }
 
 // Loads aviation data, using the cache to stay within the CheckWX quota.
@@ -31,10 +34,6 @@ export function hasCheckwxCredentials(env = {}) {
 //   now     current epoch ms (injectable for tests)
 //   fetchImpl, stations
 export async function fetchAviationData(env, options = {}) {
-  if (!hasCheckwxCredentials(env)) {
-    throw new ServiceError(503, 'AVIATION_NOT_CONFIGURED', 'CheckWX credentials are not configured.');
-  }
-
   const {
     type,
     force = false,
@@ -52,11 +51,11 @@ export async function fetchAviationData(env, options = {}) {
 
   const jobs = [];
   if (wantMetar) {
-    jobs.push(resolveReports('metar', stations.metar, env.CHECKWX_API_KEY, { force, store, now, fetchImpl })
+    jobs.push(resolveReports('metar', stations.metar, { force, store, now, fetchImpl })
       .then(({ data, cachedAt, refetched }) => { result.metar = data; meta.metar = { cachedAt, ageSeconds: Math.round((now - cachedAt) / 1000), refetched }; }));
   }
   if (wantTaf) {
-    jobs.push(resolveReports('taf', stations.taf, env.CHECKWX_API_KEY, { force, store, now, fetchImpl })
+    jobs.push(resolveReports('taf', stations.taf, { force, store, now, fetchImpl })
       .then(({ data, cachedAt, refetched }) => { result.taf = data; meta.taf = { cachedAt, ageSeconds: Math.round((now - cachedAt) / 1000), refetched }; }));
   }
   await Promise.all(jobs);
@@ -66,7 +65,7 @@ export async function fetchAviationData(env, options = {}) {
 }
 
 // Returns cached reports for a type when fresh, otherwise refetches and stores.
-async function resolveReports(kind, icaos, apiKey, { force, store, now, fetchImpl }) {
+async function resolveReports(kind, icaos, { force, store, now, fetchImpl }) {
   const key = `aviation:${kind}`;
   const ttlMs = TTL_SECONDS[kind] * 1000;
   const floorMs = FORCE_FLOOR_SECONDS * 1000;
@@ -82,7 +81,7 @@ async function resolveReports(kind, icaos, apiKey, { force, store, now, fetchImp
   }
 
   try {
-    const data = await fetchReports(kind, icaos, apiKey, fetchImpl);
+    const data = await fetchReports(kind, icaos, fetchImpl);
     await store.put(key, { data, cachedAt: now });
     return { data, cachedAt: now, refetched: true };
   } catch (err) {
@@ -92,29 +91,34 @@ async function resolveReports(kind, icaos, apiKey, { force, store, now, fetchImp
   }
 }
 
-async function fetchReports(kind, icaos, apiKey, fetchImpl) {
+// Fetches one report type from AWC for the given stations (one request per
+// station) and normalizes each into the CheckWX-shaped object.
+async function fetchReports(kind, icaos, fetchImpl) {
   const list = Array.isArray(icaos) ? icaos : [];
-  const reports = await Promise.all(
-    list.map(icao => fetchReport(`/${kind}/${encodeURIComponent(icao)}/decoded`, apiKey, fetchImpl)),
+  const normalize = kind === 'metar' ? normalizeMetar : normalizeTaf;
+  const groups = await Promise.all(
+    list.map(icao => fetchReport(kind, icao, fetchImpl)),
   );
-  return reports.flatMap(body => (Array.isArray(body.data) ? body.data : []));
+  return groups.flat().map(normalize).filter(Boolean);
 }
 
-async function fetchReport(path, apiKey, fetchImpl) {
+async function fetchReport(kind, icao, fetchImpl) {
+  const url = `${AWC_API}/${kind}?ids=${encodeURIComponent(icao)}&format=json`;
   let response;
   try {
-    response = await fetchImpl(`${CHECKWX_API}${path}`, {
-      headers: { 'X-API-Key': apiKey },
-    });
+    response = await fetchImpl(url, { headers: { Accept: 'application/json' } });
   } catch {
     throw new ServiceError(502, 'AVIATION_UPSTREAM_FAILED', 'Aviation weather data could not be loaded.');
   }
 
+  // 204 = valid request, no data currently available for the station.
+  if (response.status === 204) return [];
   if (!response.ok) {
     throw new ServiceError(502, 'AVIATION_UPSTREAM_FAILED', 'Aviation weather data could not be loaded.');
   }
 
-  return readJson(response);
+  const body = await readJson(response);
+  return Array.isArray(body) ? body : [];
 }
 
 // Default in-process store. On a Worker this persists only for the isolate's
@@ -140,6 +144,28 @@ export function createCacheStore(cache) {
         headers: { 'Content-Type': 'application/json' },
       });
       await cache.put(base + key, res);
+    },
+  };
+}
+
+// A two-tier store: a process-lifetime memory map in front of a durable backing
+// store (the Cache API in production). The memory tier makes repeated requests
+// to the same isolate cache-hit even where the Cache API is a no-op (e.g.
+// `wrangler dev`); the backing tier persists across isolates at the edge.
+export function createLayeredStore(backing) {
+  return {
+    async get(key) {
+      const mem = memoryMap.get(key);
+      if (mem) return mem;
+      if (backing) {
+        const b = await backing.get(key);
+        if (b) { memoryMap.set(key, b); return b; }
+      }
+      return null;
+    },
+    async put(key, entry) {
+      memoryMap.set(key, entry);
+      if (backing) await backing.put(key, entry);
     },
   };
 }

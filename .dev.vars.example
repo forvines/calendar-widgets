@@ -3,7 +3,8 @@
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REFRESH_TOKEN=
-CHECKWX_API_KEY=
+# Aviation weather now uses aviationweather.gov (free, no key). CHECKWX_API_KEY
+# is no longer used and is ignored if set.
 # Optional: when set, /api/calendar and /api/aviation require ?k=<this value>.
 # Leave blank locally to disable the gate; set it as a secret on the deployed
 # Worker to protect the data routes.
