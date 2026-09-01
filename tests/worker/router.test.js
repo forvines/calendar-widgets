@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { handleApiRequest } from '../../worker/router.js';
+import { ServiceError } from '../../worker/service.js';
 
 describe('Worker API router', () => {
   it('reports deployment and configured-service state', async () => {
@@ -70,5 +71,37 @@ describe('Worker API router', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(data);
     expect(fetchCalendarData).toHaveBeenCalledOnce();
+  });
+
+  it('serves aviation data from the injected service', async () => {
+    const aviation = {
+      metar: [{ icao: 'KPLU' }],
+      taf: [{ icao: 'KTCM' }],
+      stations: { metar: ['KPLU'], taf: ['KTCM'] },
+    };
+    const fetchAviationData = vi.fn().mockResolvedValue(aviation);
+    const response = await handleApiRequest(
+      new Request('https://example.test/api/aviation'),
+      {},
+      { fetchAviationData },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(aviation);
+    expect(fetchAviationData).toHaveBeenCalledOnce();
+  });
+
+  it('maps an aviation service error to its status and code', async () => {
+    const fetchAviationData = vi.fn().mockRejectedValue(
+      new ServiceError(503, 'AVIATION_NOT_CONFIGURED', 'CheckWX credentials are not configured.'),
+    );
+    const response = await handleApiRequest(
+      new Request('https://example.test/api/aviation'),
+      {},
+      { fetchAviationData },
+    );
+
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe('AVIATION_NOT_CONFIGURED');
   });
 });

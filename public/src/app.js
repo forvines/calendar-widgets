@@ -19,6 +19,7 @@ async function start() {
     const data = await loadCalendarData();
     initializeCalendar(data);
     setLoadState('ready', '');
+    setSampleDataFlag(data.source === 'mock');
   } catch (error) {
     console.error('Calendar initialization failed:', error);
     setLoadState('error', error.message || 'Calendar data could not be loaded.');
@@ -76,6 +77,11 @@ function setLoadState(state, message) {
   retryButton.hidden = state !== 'error';
   status.hidden = state === 'ready';
   content.hidden = state !== 'ready';
+}
+
+function setSampleDataFlag(isMock) {
+  const badge = document.querySelector('#sampleDataBadge');
+  if (badge) badge.hidden = !isMock;
 }
 
 function applyCalendarOverrides(sourceCalendars, overrides) {

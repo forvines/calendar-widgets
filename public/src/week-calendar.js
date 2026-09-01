@@ -1,3 +1,5 @@
+import { startOfWeek } from './date-utils.js';
+
 function toFullCalendarEvent(event, calendarMap) {
   const calendar = calendarMap.get(event.calendarId);
   return {
@@ -50,7 +52,7 @@ export function createWeekCalendar({
   const calendar = new window.FullCalendar.Calendar(element, {
     themeSystem: 'standard',
     initialView: 'timeGridRollingSeven',
-    initialDate: startOfCurrentWeek(),
+    initialDate: startOfWeek(),
     views: {
       timeGridRollingSeven: {
         type: 'timeGrid',
@@ -119,7 +121,7 @@ export function createWeekCalendar({
       calendar.incrementDate({ days: -config.week.swipeIncrementDays });
     },
     today() {
-      calendar.gotoDate(startOfCurrentWeek());
+      calendar.gotoDate(startOfWeek());
     },
     setVisibleCalendars(ids) {
       currentVisibleIds = new Set(ids);
@@ -169,13 +171,6 @@ function minutesToDuration(minutes) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`;
-}
-
-function startOfCurrentWeek() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - d.getDay());
-  return d;
 }
 
 function installSwipeNavigation(element, calendar, incrementDays) {

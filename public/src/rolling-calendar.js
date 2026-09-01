@@ -1,15 +1,4 @@
-function startOfWeek(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - d.getDay());
-  return d;
-}
-
-function addDays(date, days) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
+import { addDays, startOfWeek } from './date-utils.js';
 
 function sameCalendarDay(a, b) {
   return a.getFullYear() === b.getFullYear()

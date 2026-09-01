@@ -1,9 +1,7 @@
 import { errorResponse, jsonResponse } from './response.js';
-import {
-  CalendarServiceError,
-  fetchCalendarData,
-  hasGoogleCredentials,
-} from './google-calendar.js';
+import { ServiceError } from './service.js';
+import { fetchCalendarData, hasGoogleCredentials } from './google-calendar.js';
+import { fetchAviationData, hasCheckwxCredentials } from './aviation.js';
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -29,7 +27,7 @@ export async function handleApiRequest(request, env = {}, services = {}) {
       version: env.DEPLOYMENT_VERSION || 'development',
       services: {
         calendarConfigured: hasGoogleCredentials(env),
-        aviationConfigured: hasValues(env, ['CHECKWX_API_KEY']),
+        aviationConfigured: hasCheckwxCredentials(env),
       },
     }, { method: request.method });
   }
@@ -41,23 +39,41 @@ export async function handleApiRequest(request, env = {}, services = {}) {
         method: request.method,
       });
     }
-    try {
-      const loadCalendar = services.fetchCalendarData || fetchCalendarData;
-      const data = await loadCalendar(env, range);
-      return jsonResponse(data, { method: request.method });
-    } catch (error) {
-      if (error instanceof CalendarServiceError) {
-        return errorResponse(error.status, error.code, error.message, {}, { method: request.method });
-      }
-      return errorResponse(502, 'CALENDAR_SERVICE_FAILED', 'Calendar data could not be loaded.', {}, {
-        method: request.method,
-      });
-    }
+    return runService(
+      () => (services.fetchCalendarData || fetchCalendarData)(env, range),
+      'CALENDAR_SERVICE_FAILED',
+      'Calendar data could not be loaded.',
+      request.method,
+    );
+  }
+
+  if (url.pathname === '/api/aviation') {
+    return runService(
+      () => (services.fetchAviationData || fetchAviationData)(env),
+      'AVIATION_SERVICE_FAILED',
+      'Aviation weather data could not be loaded.',
+      request.method,
+    );
   }
 
   return errorResponse(404, 'API_ROUTE_NOT_FOUND', 'The requested API route does not exist.', {}, {
     method: request.method,
   });
+}
+
+// Runs a backend service call and turns the outcome into a JSON response. A
+// ServiceError becomes its own status/code; any other thrown value becomes a
+// generic fallback so upstream internals never leak to the client.
+async function runService(run, fallbackCode, fallbackMessage, method) {
+  try {
+    const data = await run();
+    return jsonResponse(data, { method });
+  } catch (error) {
+    if (error instanceof ServiceError) {
+      return errorResponse(error.status, error.code, error.message, {}, { method });
+    }
+    return errorResponse(502, fallbackCode, fallbackMessage, {}, { method });
+  }
 }
 
 function parseRange(params) {
@@ -66,8 +82,4 @@ function parseRange(params) {
   const duration = end.getTime() - start.getTime();
   if (!Number.isFinite(duration) || duration <= 0 || duration > 90 * 24 * 60 * 60 * 1000) return null;
   return { start, end };
-}
-
-function hasValues(env, names) {
-  return names.every(name => typeof env[name] === 'string' && env[name].trim().length > 0);
 }
