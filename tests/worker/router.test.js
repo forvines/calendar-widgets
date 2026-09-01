@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { handleApiRequest } from '../../worker/router.js';
 
 describe('Worker API router', () => {
   it('reports deployment and configured-service state', async () => {
-    const response = handleApiRequest(new Request('https://example.test/api/health'), {
+    const response = await handleApiRequest(new Request('https://example.test/api/health'), {
       DEPLOYMENT_VERSION: 'test-commit',
       CHECKWX_API_KEY: 'configured-for-test',
     });
@@ -22,7 +22,7 @@ describe('Worker API router', () => {
   });
 
   it('returns headers without a body for a HEAD health check', async () => {
-    const response = handleApiRequest(new Request('https://example.test/api/health', {
+    const response = await handleApiRequest(new Request('https://example.test/api/health', {
       method: 'HEAD',
     }));
 
@@ -32,7 +32,7 @@ describe('Worker API router', () => {
   });
 
   it('rejects mutation methods', async () => {
-    const response = handleApiRequest(new Request('https://example.test/api/health', {
+    const response = await handleApiRequest(new Request('https://example.test/api/health', {
       method: 'POST',
     }));
 
@@ -47,9 +47,28 @@ describe('Worker API router', () => {
   });
 
   it('returns a JSON error for unknown API routes', async () => {
-    const response = handleApiRequest(new Request('https://example.test/api/missing'));
+    const response = await handleApiRequest(new Request('https://example.test/api/missing'));
 
     expect(response.status).toBe(404);
     expect((await response.json()).error.code).toBe('API_ROUTE_NOT_FOUND');
+  });
+
+  it('validates calendar ranges before loading data', async () => {
+    const response = await handleApiRequest(new Request('https://example.test/api/calendar?start=bad&end=worse'));
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).toBe('INVALID_DATE_RANGE');
+  });
+
+  it('returns normalized calendar data from the calendar service', async () => {
+    const data = { calendars: [{ id: 'family' }], events: [{ id: 'family:event' }] };
+    const fetchCalendarData = vi.fn().mockResolvedValue(data);
+    const response = await handleApiRequest(new Request(
+      'https://example.test/api/calendar?start=2026-09-01T00:00:00Z&end=2026-10-01T00:00:00Z',
+    ), {}, { fetchCalendarData });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(data);
+    expect(fetchCalendarData).toHaveBeenCalledOnce();
   });
 });
