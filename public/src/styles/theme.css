@@ -12,6 +12,9 @@
      alpha values to taste; lower alpha = more transparent. */
   --week-tile-bg: rgba(13, 21, 30, .48);
   --month-tile-bg: rgba(13, 21, 30, .60);
+  /* The expanded week inside the accordion needs more opacity than a compact
+     week row so its hour grid and events stay readable. */
+  --week-expanded-tile-bg: rgba(13, 21, 30, .58);
 
   --border: var(--db-border);
   --grid-line: var(--db-grid-line);
@@ -32,8 +35,6 @@
   --event-radius: var(--db-event-radius);
 
   /* Easy layout tuning once this is on the real DAKboard screen. */
-  --week-pane-size: 1fr;
-  --rolling-pane-size: 1.12fr;
   --hour-slot-min-height: 28px;
   /* Weekly event typography/grid are tuned in fullcalendar.css. */
 }
