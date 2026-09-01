@@ -48,14 +48,14 @@
   border-color: rgba(150, 170, 188, .28) !important;
 }
 
-/* Each calendar surface is a 30%-transparent tile. */
+/* Each calendar surface is a 30%-transparent tile. The daygrid (all-day) area
+   is painted once on its frame (below); painting it here too would double the
+   opacity and create a darker patch. */
 #weekCalendar .fc-col-header-cell,
 #weekCalendar .fc-timegrid-axis,
 #weekCalendar .fc-timegrid-slot-label,
-#weekCalendar .fc-timegrid-col,
-#weekCalendar .fc-daygrid-day,
-#weekCalendar .fc-daygrid-body-natural .fc-daygrid-day-events {
-  background: var(--tile-bg) !important;
+#weekCalendar .fc-timegrid-col {
+  background: var(--week-tile-bg) !important;
 }
 
 /* Header: Google-like weekday + date hierarchy. */
@@ -113,7 +113,7 @@
 /* Time axis and grid. */
 #weekCalendar .fc-timegrid-axis,
 #weekCalendar .fc-timegrid-slot-label {
-  background: var(--tile-bg) !important;
+  background: var(--week-tile-bg) !important;
 }
 
 #weekCalendar .fc-timegrid-axis-cushion,
@@ -153,7 +153,7 @@
 
 #weekCalendar .fc-daygrid-day-frame,
 #weekCalendar .fc-timegrid-col-frame {
-  background: var(--tile-bg);
+  background: var(--week-tile-bg);
 }
 
 #weekCalendar .fc-timegrid-divider {

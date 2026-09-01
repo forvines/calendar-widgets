@@ -7,12 +7,25 @@ function sameCalendarDay(a, b) {
     && a.getDate() === b.getDate();
 }
 
-function eventTouchesDay(event, day) {
-  if (event.allDay) {
-    const end = event.end ? new Date(event.end) : addDays(event.start, 1);
-    return event.start < addDays(day, 1) && end > day;
-  }
-  return sameCalendarDay(event.start, day);
+function dayStart(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// Inclusive last calendar day an event covers. All-day events use an exclusive
+// end (Google convention), so the last covered day is end - 1 day.
+function eventEndDay(event) {
+  if (!event.end) return dayStart(event.start);
+  if (event.allDay) return dayStart(addDays(event.end, -1));
+  return dayStart(event.end);
+}
+
+// An event is a "spanning" bar when it is all-day or covers more than one
+// calendar day. These render as continuous bars across the week grid.
+function isSpanning(event) {
+  if (event.allDay) return true;
+  return eventEndDay(event).getTime() > dayStart(event.start).getTime();
 }
 
 function monthForWeek(weekStart) {
@@ -56,6 +69,20 @@ export function createRollingCalendar({
   let currentVisibleIds = new Set(visibleIds);
   let appending = false;
 
+  function styleEventEl(el, event) {
+    const color = calendarMap.get(event.calendarId)?.color || '#7baaf7';
+    el.style.setProperty('--event-color', color);
+    el.style.setProperty('background-color', hexToRgba(color, 0.88));
+    el.style.setProperty('color', readableTextColor(color));
+  }
+
+  function eventInner(event) {
+    const time = formatEventTime(event);
+    return time
+      ? `<span class="rolling-event-time">${escapeHtml(time)}</span><span>${escapeHtml(event.title)}</span>`
+      : `<span>${escapeHtml(event.title)}</span>`;
+  }
+
   function render({ preserveScroll = true } = {}) {
     const savedScroll = preserveScroll ? container.scrollTop : 0;
     container.innerHTML = '';
@@ -84,62 +111,100 @@ export function createRollingCalendar({
         previousMonth = key;
       }
 
-      const weekRow = document.createElement('div');
-      weekRow.className = 'rolling-week';
-
-      for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
-        const day = addDays(weekStart, dayIndex);
-        weekRow.appendChild(renderDay(day));
-      }
-
-      container.appendChild(weekRow);
+      container.appendChild(renderWeek(weekStart));
     }
 
     if (preserveScroll) container.scrollTop = savedScroll;
   }
 
-  function renderDay(day) {
-    const dayCell = document.createElement('div');
-    dayCell.className = 'rolling-day';
+  function renderWeek(weekStart) {
+    const weekRow = document.createElement('div');
+    weekRow.className = 'rolling-week';
 
-    if (sameCalendarDay(day, new Date())) dayCell.classList.add('is-today');
+    const days = [];
+    for (let i = 0; i < 7; i += 1) days.push(addDays(weekStart, i));
+    const weekEnd = days[6];
+    const dayMs = 86400000;
 
-    const number = document.createElement('div');
-    number.className = 'rolling-day-number';
-    number.textContent = day.getDate();
-    dayCell.appendChild(number);
+    const visible = events.filter(e => currentVisibleIds.has(e.calendarId));
 
-    const dayEvents = events
-      .filter(event => currentVisibleIds.has(event.calendarId))
-      .filter(event => eventTouchesDay(event, day))
-      .sort((a, b) => {
-        // All-day (and multi-day) events sit at the top of the day, then timed
-        // events in chronological order.
-        if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
-        return a.start - b.start;
-      });
+    // Assign spanning (all-day / multi-day) events to lanes so overlapping bars
+    // stack. Compute this first so day cells can reserve the right top padding.
+    const spanning = visible
+      .filter(isSpanning)
+      .filter(e => dayStart(e.start) <= weekEnd && eventEndDay(e) >= days[0])
+      .sort((a, b) => (dayStart(a.start) - dayStart(b.start))
+        || (eventEndDay(b) - eventEndDay(a)));
 
-    for (const event of dayEvents) {
-      const pill = document.createElement('button');
-      pill.type = 'button';
-      pill.className = 'rolling-event';
-      const calendar = calendarMap.get(event.calendarId);
-      const color = calendar?.color || '#7baaf7';
-      const textColor = readableTextColor(color);
-      pill.style.setProperty('--event-color', color);
-      pill.style.setProperty('background-color', hexToRgba(color, 0.88));
-      pill.style.setProperty('color', textColor);
+    const laneEnds = []; // last occupied column index per lane
+    const placed = [];
+    for (const event of spanning) {
+      const startCol = Math.max(0, Math.round((dayStart(event.start) - days[0]) / dayMs));
+      const endCol = Math.min(6, Math.round((eventEndDay(event) - days[0]) / dayMs));
+      let lane = laneEnds.findIndex(end => end < startCol);
+      if (lane === -1) lane = laneEnds.length;
+      laneEnds[lane] = endCol;
+      placed.push({ event, startCol, endCol, lane });
+    }
+    const laneCount = laneEnds.length;
 
-      const eventTime = formatEventTime(event);
-      pill.innerHTML = eventTime
-        ? `<span class="rolling-event-time">${escapeHtml(eventTime)}</span><span>${escapeHtml(event.title)}</span>`
-        : `<span>${escapeHtml(event.title)}</span>`;
+    // Day cells (normal grid flow). Each reserves top space for the bar lanes
+    // so its single-day events begin below any spanning bars.
+    for (let i = 0; i < 7; i += 1) {
+      const dayCell = document.createElement('div');
+      dayCell.className = 'rolling-day';
+      dayCell.style.setProperty('--span-lanes', String(laneCount));
+      if (sameCalendarDay(days[i], new Date())) dayCell.classList.add('is-today');
 
-      pill.addEventListener('click', () => onEventClick(event));
-      dayCell.appendChild(pill);
+      const number = document.createElement('div');
+      number.className = 'rolling-day-number';
+      number.textContent = days[i].getDate();
+      dayCell.appendChild(number);
+
+      const dayTimed = visible
+        .filter(e => !isSpanning(e) && sameCalendarDay(e.start, days[i]))
+        .sort((a, b) => a.start - b.start);
+      if (dayTimed.length) {
+        const stack = document.createElement('div');
+        stack.className = 'rolling-day-events';
+        for (const event of dayTimed) {
+          const pill = document.createElement('button');
+          pill.type = 'button';
+          pill.className = 'rolling-event';
+          styleEventEl(pill, event);
+          pill.innerHTML = eventInner(event);
+          pill.addEventListener('click', () => onEventClick(event));
+          stack.appendChild(pill);
+        }
+        dayCell.appendChild(stack);
+      }
+      weekRow.appendChild(dayCell);
     }
 
-    return dayCell;
+    // Spanning-bar overlay: one continuous bar per event, positioned over the
+    // day columns by percentage width and lane offset. Decoupled from the day-
+    // cell flow so bars never collide with numbers or per-day events.
+    if (placed.length) {
+      const layer = document.createElement('div');
+      layer.className = 'rolling-span-layer';
+      for (const { event, startCol, endCol, lane } of placed) {
+        const bar = document.createElement('button');
+        bar.type = 'button';
+        bar.className = 'rolling-span';
+        if (dayStart(event.start) < days[0]) bar.classList.add('is-continued-left');
+        if (eventEndDay(event) > weekEnd) bar.classList.add('is-continued-right');
+        bar.style.left = `${(startCol / 7) * 100}%`;
+        bar.style.width = `${((endCol - startCol + 1) / 7) * 100}%`;
+        bar.style.top = `calc(var(--rolling-day-number-h) + ${lane} * var(--rolling-span-h))`;
+        styleEventEl(bar, event);
+        bar.innerHTML = eventInner(event);
+        bar.addEventListener('click', () => onEventClick(event));
+        layer.appendChild(bar);
+      }
+      weekRow.appendChild(layer);
+    }
+
+    return weekRow;
   }
 
   container.addEventListener('scroll', () => {
