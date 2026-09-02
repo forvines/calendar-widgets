@@ -7,7 +7,7 @@ const INTERACTION_EVENTS = [
   'click', 'wheel', 'keydown', 'scroll',
 ];
 
-export function installIdleFade(root, idleConfig = {}) {
+export function installIdleFade(root, idleConfig = {}, hooks = {}) {
   const seconds = Number(idleConfig.idleFadeSeconds) || 0;
   if (seconds <= 0) return { destroy() {} }; // disabled
 
@@ -17,6 +17,9 @@ export function installIdleFade(root, idleConfig = {}) {
   let timer = null;
 
   function goIdle() {
+    // Snap to the current week so idle always shows the week containing today,
+    // then apply the idle layout (CSS isolates + bottom-anchors that week).
+    if (typeof hooks.onIdle === 'function') hooks.onIdle();
     root.classList.add('is-idle');
   }
 

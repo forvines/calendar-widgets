@@ -115,16 +115,17 @@ export function createMonthAccordion({
   function renderWeekBlock(weekStart) {
     const key = weekKey(weekStart);
     const isExpanded = key === expandedKey;
+    const isCurrentWeek = sameCalendarDay(weekStart, currentWeekStart);
 
     const block = document.createElement('section');
-    block.className = `week-block${isExpanded ? ' is-expanded' : ''}`;
+    block.className = `week-block${isExpanded ? ' is-expanded' : ''}${isCurrentWeek ? ' is-current-week' : ''}`;
 
     // Clickable week header (toggles this week).
     const header = document.createElement('button');
     header.type = 'button';
     header.className = 'week-block-header';
     header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-    if (sameCalendarDay(weekStart, currentWeekStart)) header.classList.add('is-current');
+    if (isCurrentWeek) header.classList.add('is-current');
     header.innerHTML = `
       <span class="week-block-caret" aria-hidden="true">${isExpanded ? '▾' : '▸'}</span>
       <span class="week-block-range">${escapeHtml(formatWeekRange(weekStart))}</span>
