@@ -106,7 +106,6 @@ function render() {
       row.innerHTML = `
         <span class="icao">${esc(s.icao)}</span>
         <span class="taf-timeline">${pills || '<span class="raw">No forecast</span>'}</span>
-        <span class="kind">TAF</span>
       `;
     } else {
       // METAR row: one station pill (ICAO + category) per station.
@@ -114,7 +113,6 @@ function render() {
         `<span class="stnpill ${esc(st.category)}"><span class="stnpill-id">${esc(st.icao)}</span> ${esc(st.category)}</span>`
       ).join('');
       row.innerHTML = `
-        <span class="kind">METAR</span>
         <span class="taf-timeline">${pills || '<span class="raw">No data</span>'}</span>
       `;
       row.addEventListener('click', () => {

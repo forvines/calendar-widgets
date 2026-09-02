@@ -10,7 +10,7 @@ const AWC_API = 'https://aviationweather.gov/api/data';
 // Server-side station configuration. Defined on the server so the widget cannot
 // request arbitrary stations. To add or change stations, edit this list.
 export const STATIONS = {
-  metar: ['KPLU', 'KRNT', 'KTIW', 'KCLS'],
+  metar: ['KPLU', 'KRNT', 'KTIW', 'KOLM', 'KCLS'],
   taf: ['KTCM'],
 };
 
