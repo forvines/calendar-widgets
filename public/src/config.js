@@ -24,7 +24,7 @@ export const config = {
   // returns it to full opacity. Set idleFadeSeconds to 0 to disable.
   idle: {
     idleFadeSeconds: 120,
-    fadedOpacity: 0.25, // ~twice as see-through (lower = more transparent)
+    fadedOpacity: 0.75, // idle current-week opacity (lower = more transparent)
   },
 
   // This object is intentionally keyed by stable calendar IDs.

@@ -11,14 +11,18 @@ const retryButton = document.querySelector('#calendarRetry');
 const content = document.querySelector('#calendarContent');
 const reloadButton = document.querySelector('#reloadButton');
 
-// Fade the calendar toward the background photo after inactivity.
-installIdleFade(document.querySelector('#app'), config.idle);
-
 // How often the calendar silently re-fetches from the backend so edits made in
 // Google Calendar appear on a passive wall display without manual interaction.
 const AUTO_REFRESH_MINUTES = 10;
 
 let currentMonth = null; // live accordion instance, so reloads can replace it
+
+// Fade the calendar toward the background photo after inactivity. On going idle,
+// snap the accordion to the current week so the idle view always shows the week
+// containing today (the idle CSS isolates and bottom-anchors that week).
+installIdleFade(document.querySelector('#app'), config.idle, {
+  onIdle: () => { if (currentMonth) currentMonth.goToToday(); },
+});
 
 retryButton.addEventListener('click', () => start());
 if (reloadButton) reloadButton.addEventListener('click', () => start({ isReload: true }));
