@@ -423,32 +423,6 @@ import {
     }
   }
 
-  function renderFocus(weather) {
-    const box = $("focusMessage");
-    box.className = "focus";
-    box.textContent = "";
-
-    const daily = weather.daily || {};
-    const current = weather.current || {};
-    const maxPop = round(daily.precipitation_probability_max?.[0]) || 0;
-    const gust = round(daily.wind_gusts_10m_max?.[0]) || 0;
-    const high = round(daily.temperature_2m_max?.[0]);
-
-    if (maxPop >= 55) {
-      box.textContent = `Rain is likely today — peak probability ${maxPop}%.`;
-      box.className = "focus show rain";
-    } else if (gust >= 30) {
-      box.textContent = `Gusty today — winds may reach about ${gust} mph.`;
-      box.className = "focus show wind";
-    } else if (high != null && high >= 90) {
-      box.textContent = `Hot today — forecast high ${high}°.`;
-      box.className = "focus show heat";
-    } else if (Number.isFinite(current.wind_gusts_10m) && current.wind_gusts_10m >= 25) {
-      box.textContent = `Currently breezy — gusting around ${round(current.wind_gusts_10m)} mph.`;
-      box.className = "focus show wind";
-    }
-  }
-
   function renderWeather(weather) {
     const c = weather.current || {};
     const d = weather.daily || {};
@@ -505,7 +479,6 @@ import {
     lastDaily = d;
     renderHourly(lastHourly, lastDaily);
     renderDaily(d);
-    renderFocus(weather);
   }
 
   function renderAirUnavailable() {
@@ -536,25 +509,25 @@ import {
   }
 
   function renderAlerts(alerts) {
-    const banner = $("alertBanner");
-    banner.classList.remove("show");
-
+    const icon = $("severeIcon");
     const features = Array.isArray(alerts?.features) ? alerts.features : [];
-    if (!features.length) return;
+    if (!features.length) {
+      icon.hidden = true;
+      icon.removeAttribute("title");
+      return;
+    }
 
-    features.sort((a,b) =>
+    features.sort((a, b) =>
       alertRank(b?.properties?.severity) - alertRank(a?.properties?.severity)
     );
-
     const p = features[0]?.properties || {};
-    $("alertTitle").textContent = p.event || "Weather Alert";
-
     const until = p.ends ? ` · until ${fmtClock(p.ends)}` : "";
-    const headline = p.headline || p.description || "";
-    $("alertDetail").textContent =
-      `${headline}${until}`.replace(/\s+/g, " ").trim();
+    const headline = (p.headline || p.description || "").replace(/\s+/g, " ").trim();
 
-    banner.classList.add("show");
+    // Compact indicator: the icon shows when any alert is active; the event
+    // name + headline live in its tooltip.
+    icon.hidden = false;
+    icon.title = `${p.event || "Weather Alert"}${until}${headline ? `\n${headline}` : ""}`;
   }
 
   async function load() {
@@ -598,7 +571,7 @@ import {
         renderAlerts(alertsResult.value);
       } else {
         console.warn("NWS alert request failed:", alertsResult.reason);
-        $("alertBanner").classList.remove("show");
+        $("severeIcon").hidden = true;
       }
 
       statusDot.className = "dot";
