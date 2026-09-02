@@ -169,6 +169,10 @@
       color:var(--soft);
       white-space:nowrap;
     }
+    .today-low{
+      color:var(--db-text, #eef5fb);
+      font-weight:900;
+    }
 
     .summary{
       display:grid;
@@ -262,6 +266,76 @@
       letter-spacing:.11em;
       text-transform:uppercase;
     }
+    .hourly.is-chart{
+      display:block;
+      grid-template-columns:none;
+      background:var(--db-tile-bg, rgba(13,21,30,.55));
+      padding:2px 4px;
+    }
+    .hourly-chart{
+      width:100%;
+      height:166px;
+      display:block;
+    }
+    .hourly-chart .ch-templine{
+      stroke-width:2;
+      vector-effect:non-scaling-stroke;
+    }
+    .hourly-chart .ch-bar{
+      fill:rgba(37,137,255,.45);
+    }
+    .hourly-chart .ch-bar.is-wet{
+      fill:rgba(37,137,255,.9);
+    }
+    .hourly-chart .ch-axis{
+      fill:var(--db-muted, #8fa3b5);
+      font-size:9px;
+      font-weight:700;
+    }
+    .hourly-chart .ch-x{
+      text-anchor:middle;
+    }
+    .hourly-chart .ch-right{
+      text-anchor:end;
+    }
+    .hourly-chart .ch-amt{
+      fill:#bcd8ff;
+      font-size:7.5px;
+      font-weight:700;
+      text-anchor:middle;
+    }
+    .hourly-chart .ch-sun{
+      stroke:#ffd27a;
+      stroke-width:1;
+      stroke-dasharray:2 2;
+      opacity:.55;
+    }
+    .hourly-chart .ch-sun.sunset{
+      stroke:#9db4d6;
+    }
+    .hourly-chart .ch-sun-lbl{
+      fill:#ffd27a;
+      font-size:8px;
+      font-weight:800;
+      text-anchor:middle;
+    }
+    .hourly-chart .ch-wind-arrow{
+      fill:var(--db-soft, #c8d4de);
+      font-size:11px;
+      text-anchor:middle;
+    }
+    .hourly-chart .ch-wind-spd{
+      fill:var(--db-muted, #8fa3b5);
+      font-size:8px;
+      font-weight:700;
+      text-anchor:start;
+    }
+    .chart-empty{
+      color:var(--db-muted, #8fa3b5);
+      font-size:10px;
+      padding:12px;
+      text-align:center;
+    }
     .section-title .secondary{
       font-size:9.6px;
       font-weight:600;
@@ -279,48 +353,6 @@
       gap:1px;
     }
 
-    .hour{
-      min-width:0;
-      padding:4px 4px 3px;
-      text-align:center;
-      background:var(--db-tile-bg, rgba(13,21,30,.70));
-    }
-    .hour-time{
-      color:var(--muted);
-      font-size:9.6px;
-      font-weight:800;
-    }
-    .hour-icon{
-      margin:1px 0 1px;
-      font-size:18px;
-      line-height:1;
-    }
-    .hour-temp{
-      font-size:12px;
-      font-weight:850;
-    }
-    .hour-pop{
-      margin-top:1px;
-      font-size:9px;
-      color:#93c5fd;
-      font-weight:750;
-    }
-    .rain-track{
-      height:11px;
-      margin:3px auto 0;
-      width:8px;
-      display:flex;
-      align-items:flex-end;
-      border-radius:2px;
-      overflow:hidden;
-      background:rgba(96,165,250,.08);
-    }
-    .rain-bar{
-      width:100%;
-      min-height:1px;
-      background:var(--rain);
-      border-radius:2px 2px 0 0;
-    }
 
     .daily{
       display:grid;
@@ -334,6 +366,14 @@
       border-radius:7px;
       background:var(--db-tile-bg, rgba(13,21,30,.70));
       text-align:center;
+      color:inherit;
+      font:inherit;
+      cursor:pointer;
+    }
+
+    .day.is-selected{
+      border-color:var(--db-soft, #c8d4de);
+      background:var(--db-tile-strong, rgba(16,25,35,.82));
     }
     .day-name{
       font-size:9.6px;
@@ -457,35 +497,11 @@
         grid-template-columns:repeat(8,minmax(0,1fr));
       }
 
-      .hour{
-        padding:4px 2px 3px;
-      }
 
-      .hour-time{
-        font-size:9px;
-      }
 
-      .hour-icon{
-        margin:1px 0 0;
-        font-size:15px;
-      }
 
-      .hour-temp{
-        font-size:11px;
-      }
 
-      .hour-pop{
-        margin-top:1px;
-        font-size:8.4px;
-        line-height:1.08;
-        white-space:normal;
-      }
 
-      .rain-track{
-        height:8px;
-        margin-top:1px;
-        width:6px;
-      }
 
       /* Keep the whole week on one row too. */
       .daily{
@@ -589,14 +605,7 @@
         font-size:9.6px;
       }
 
-      .hour{
-        padding-left:1px;
-        padding-right:1px;
-      }
 
-      .hour-icon{
-        font-size:14px;
-      }
 
       .day{
         padding-left:1px;
@@ -689,7 +698,7 @@
     <section class="section">
       <div class="section-title">
         <span>Next 24 Hours</span>
-        <span class="secondary">3-hour intervals · temperature + rain</span>
+        <span class="secondary">temperature, rain chance &amp; wind</span>
       </div>
       <div id="hourlyGrid" class="hourly"></div>
     </section>
