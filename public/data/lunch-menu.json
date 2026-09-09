@@ -1,8 +1,31 @@
 {
   "source": "https://www.cascadechristian.org/editoruploads/files/mcalder/menus/LunchMenu.pdf",
-  "menuMonth": null,
-  "updatedAt": null,
+  "menuMonth": "2026-09",
+  "updatedAt": "2026-09-09T16:17:00Z",
   "sourceLastModified": null,
   "sourceSha256": null,
-  "days": {}
+  "days": {
+    "2026-09-01": "",
+    "2026-09-02": "FIRST DAY OF SCHOOL\nSausage Gravy\nBiscuit and Hash brown\nFruit",
+    "2026-09-03": "Cheeseburger\nChips\nVeggie/Fruit",
+    "2026-09-04": "Cheese Pizza\nVeggie/Fruit\nTreat",
+    "2026-09-07": "LABOR DAY\nNO SCHOOL",
+    "2026-09-08": "Bean & Cheese Quesadilla\nSpanish Rice\nVeggie/Fruit",
+    "2026-09-09": "Sausage, Egg, Cheese Biscuit\nHash brown\nYogurt\nFruit",
+    "2026-09-10": "Hot Dog\nFries\nVeggie/Fruit",
+    "2026-09-11": "Pepperoni Pizza\nVeggie/Fruit\nTreat",
+    "2026-09-14": "Marinara Meatball Penne Pasta\nBreadstick\nVeggie/Fruit",
+    "2026-09-15": "Chicken Taquitos\nRefried Beans\nVeggie/Fruit",
+    "2026-09-16": "French Toast\nSausage Link\nHash brown\nYogurt\nFruit",
+    "2026-09-17": "Chicken Burger\nChips\nVeggie/Fruit",
+    "2026-09-18": "FAIR DAY\nEARLY DISMISSAL\nNO LUNCH",
+    "2026-09-21": "Teriyaki Chicken\nVeggie Fried Rice\nSpring Roll\nFruit",
+    "2026-09-22": "Super Beef Nachos\nVeggie/Fruit",
+    "2026-09-23": "Chicken and Waffles\nVeggie/Fruit",
+    "2026-09-24": "Sloppy Joe\nChips\nVeggie/Fruit",
+    "2026-09-25": "Cheese Pizza\nVeggie/Fruit\nTreat",
+    "2026-09-28": "Chili Mac and Cheese\nVeggie/Fruit",
+    "2026-09-29": "Beef Taquito\nRefried Beans\nVeggie/Fruit",
+    "2026-09-30": "Pancake\nSausage Link\nYogurt\nFruit"
+  }
 }
