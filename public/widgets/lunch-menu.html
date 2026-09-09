@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>McAlder Lunch Menu</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      color: var(--db-text, #eef5fb);
+      font-family: var(--db-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+    body { padding: 4px; }
+
+    .widget {
+      width: 100%;
+      height: 100%;
+      min-height: 118px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--db-border, #263543);
+      border-radius: var(--db-corner, 10px);
+      background: var(--db-tile-bg, rgba(13,21,30,.70));
+      overflow: hidden;
+    }
+
+    .header {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 10px 6px;
+      border-bottom: 1px solid var(--db-grid-line, rgba(150,170,188,.20));
+    }
+
+    .title {
+      font-size: 13px;
+      font-weight: 850;
+      letter-spacing: .02em;
+    }
+
+    .campus {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--db-muted, #8fa3b5);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+    }
+
+    .days {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+    }
+
+    .day {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(88px, 29%) 1fr;
+      gap: 9px;
+      align-items: center;
+      padding: 6px 10px;
+      border-top: 1px solid var(--db-grid-line-soft, rgba(150,170,188,.11));
+    }
+    .day:first-child { border-top: 0; }
+    .day.today { background: var(--db-today-bg, rgba(39,78,125,.42)); }
+
+    .when {
+      min-width: 0;
+      align-self: start;
+      padding-top: 1px;
+    }
+
+    .relative {
+      display: block;
+      font-size: 10px;
+      line-height: 1.1;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--db-soft, #c8d4de);
+    }
+
+    .date {
+      display: block;
+      margin-top: 3px;
+      font-size: 9px;
+      line-height: 1.1;
+      font-weight: 650;
+      color: var(--db-muted, #8fa3b5);
+      white-space: nowrap;
+    }
+
+    .meal {
+      min-width: 0;
+      max-height: 100%;
+      overflow: hidden;
+      white-space: pre-line;
+      font-size: clamp(10px, 2.5vh, 13px);
+      line-height: 1.18;
+      font-weight: 650;
+      color: var(--db-text, #eef5fb);
+    }
+
+    .meal.empty { color: var(--db-muted, #8fa3b5); font-weight: 600; }
+
+    .status {
+      flex: 0 0 auto;
+      display: none;
+      padding: 3px 10px 4px;
+      border-top: 1px solid var(--db-grid-line-soft, rgba(150,170,188,.11));
+      font-size: 8px;
+      line-height: 1.1;
+      color: var(--db-muted-2, #657a8d);
+    }
+    .status.visible { display: block; }
+    .widget.is-error .status { color: #fecaca; }
+
+    @media (max-height: 155px) {
+      .header { padding-top: 5px; padding-bottom: 4px; }
+      .day { padding-top: 4px; padding-bottom: 4px; }
+      .date { margin-top: 2px; }
+      .status { display: none !important; }
+    }
+
+    @media (max-width: 300px) {
+      .day { grid-template-columns: 78px 1fr; gap: 7px; padding-left: 8px; padding-right: 8px; }
+      .campus { display: none; }
+    }
+  </style>
+  <link rel="stylesheet" href="../shared/dashboard-theme.css">
+</head>
+<body>
+  <main id="widget" class="widget">
+    <header class="header">
+      <span class="title">Lunch</span>
+      <span class="campus">McAlder</span>
+    </header>
+
+    <div class="days" aria-live="polite">
+      <section class="day today">
+        <div class="when">
+          <span class="relative">Today</span>
+          <span id="todayDate" class="date">—</span>
+        </div>
+        <div id="todayMeal" class="meal empty">Loading…</div>
+      </section>
+
+      <section class="day">
+        <div class="when">
+          <span class="relative">Tomorrow</span>
+          <span id="tomorrowDate" class="date">—</span>
+        </div>
+        <div id="tomorrowMeal" class="meal empty">Loading…</div>
+      </section>
+    </div>
+
+    <div id="status" class="status"></div>
+  </main>
+
+  <script type="module" src="./lunch-menu.js"></script>
+</body>
+</html>
