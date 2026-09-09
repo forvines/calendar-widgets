@@ -6,10 +6,10 @@
   timeline. Data comes from the Worker's `/api/aviation` route
   (aviationweather.gov, server-side, no key). `?mock=1` previews without a
   network call.
+- `lunch-menu.html` — compact McAlder lunch tile showing today and tomorrow.
+  It reads `../data/lunch-menu.json`; a scheduled GitHub Action downloads the
+  school's monthly PDF and refreshes that JSON only when the source PDF changes.
 
-Both pages load shared visual tokens from `../shared/dashboard-theme.css` but
-otherwise remain standalone pages for easy iframe embedding. Their browser
-entry points are `weather.js` and `aviation-strip.js`; reusable formatting and
-classification logic lives in the adjacent `*-core.js` modules so it can be
-tested without a DOM or network access. `aviation-mock.js` holds the preview
-payload.
+All pages load shared visual tokens from `../shared/dashboard-theme.css` but
+otherwise remain standalone pages for easy iframe embedding. Browser entry
+points live beside their HTML files.
