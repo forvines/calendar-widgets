@@ -7,14 +7,19 @@ import hashlib
 import json
 import re
 import sys
+import time
+import urllib.error
+import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import fitz  # PyMuPDF
 
 SOURCE_URL = "https://www.cascadechristian.org/editoruploads/files/mcalder/menus/LunchMenu.pdf"
 OUTPUT = Path("public/data/lunch-menu.json")
+PACIFIC = ZoneInfo("America/Los_Angeles")
 MONTHS = {
     name.lower(): number
     for number, name in enumerate(
@@ -29,12 +34,32 @@ WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
 
 def fetch_pdf() -> tuple[bytes, str | None]:
-    req = urllib.request.Request(
-        SOURCE_URL,
-        headers={"User-Agent": "calendar-widgets/1.0 (+https://github.com/forvines/calendar-widgets)"},
-    )
-    with urllib.request.urlopen(req, timeout=30) as response:
-        return response.read(), response.headers.get("Last-Modified")
+    """Fetch the PDF, bypassing the school's occasionally stale intermediary cache."""
+    last_error: Exception | None = None
+    for attempt in range(1, 4):
+        cache_bust = f"{int(time.time())}-{attempt}"
+        url = f"{SOURCE_URL}?{urllib.parse.urlencode({'cb': cache_bust})}"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "calendar-widgets/1.1 (+https://github.com/forvines/calendar-widgets)",
+                "Accept": "application/pdf,*/*;q=0.8",
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as response:
+                data = response.read()
+                if len(data) < 1000 or not data.startswith(b"%PDF"):
+                    raise RuntimeError("Lunch menu response was not a valid PDF.")
+                return data, response.headers.get("Last-Modified")
+        except (urllib.error.URLError, TimeoutError, RuntimeError) as exc:
+            last_error = exc
+            if attempt < 3:
+                time.sleep(2 * attempt)
+
+    raise RuntimeError(f"Could not download a valid lunch menu PDF after 3 attempts: {last_error}")
 
 
 def infer_month_year(text: str) -> tuple[int, int]:
@@ -48,14 +73,14 @@ def infer_month_year(text: str) -> tuple[int, int]:
     month = MONTHS[month_match.group(1).lower()]
 
     years = [int(value) for value in re.findall(r"\b20\d{2}\b", text)]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(PACIFIC)
     if years:
         year = min(years, key=lambda value: abs(value - now.year))
     else:
         candidates = [now.year - 1, now.year, now.year + 1]
         year = min(
             candidates,
-            key=lambda value: abs((datetime(value, month, 1, tzinfo=timezone.utc) - now).days),
+            key=lambda value: abs((datetime(value, month, 1, tzinfo=PACIFIC) - now).days),
         )
     return month, year
 
@@ -173,28 +198,84 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
     return dict(sorted(days.items())), month, year
 
 
-def main() -> int:
-    pdf_bytes, last_modified = fetch_pdf()
-    digest = hashlib.sha256(pdf_bytes).hexdigest()
+def load_existing() -> dict:
+    if not OUTPUT.exists():
+        return {}
+    try:
+        return json.loads(OUTPUT.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {}
 
-    existing = {}
-    if OUTPUT.exists():
+
+def existing_covers_current_month(existing: dict, now: datetime) -> bool:
+    days = existing.get("days")
+    if not isinstance(days, dict):
+        return False
+    prefix = now.strftime("%Y-%m-")
+    return any(isinstance(key, str) and key.startswith(prefix) for key in days)
+
+
+def validate_menu_month(month: int, year: int, now: datetime) -> None:
+    delta = (year - now.year) * 12 + (month - now.month)
+    # A school may publish next month's menu a few days early, but anything
+    # older than the current month is stale and must never replace current data.
+    if delta not in (0, 1):
+        raise RuntimeError(
+            f"Downloaded menu is for {year:04d}-{month:02d}, not the current/next month "
+            f"({now:%Y-%m}); refusing stale data."
+        )
+
+
+def merge_days(existing: dict, incoming: dict[str, str], now: datetime) -> dict[str, str]:
+    merged = dict(existing.get("days") or {})
+    merged.update(incoming)
+
+    # Keep a small overlap so an early next-month publication does not make the
+    # final day(s) of the current month disappear from the widget.
+    earliest = now.date() - timedelta(days=45)
+    latest = now.date() + timedelta(days=100)
+    pruned: dict[str, str] = {}
+    for key, value in merged.items():
         try:
-            existing = json.loads(OUTPUT.read_text())
-        except (json.JSONDecodeError, OSError):
-            existing = {}
-    if existing.get("sourceSha256") == digest:
-        print("Lunch PDF unchanged; nothing to update.")
-        return 0
+            day = datetime.strptime(key, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            continue
+        if earliest <= day <= latest:
+            pruned[key] = value
+    return dict(sorted(pruned.items()))
 
-    days, month, year = parse_days(pdf_bytes)
+
+def main() -> int:
+    now = datetime.now(PACIFIC)
+    existing = load_existing()
+
+    try:
+        pdf_bytes, last_modified = fetch_pdf()
+        digest = hashlib.sha256(pdf_bytes).hexdigest()
+
+        if existing.get("sourceSha256") == digest:
+            print("Lunch PDF unchanged; nothing to update.")
+            return 0
+
+        days, month, year = parse_days(pdf_bytes)
+        validate_menu_month(month, year, now)
+    except Exception as exc:
+        # If the school briefly serves an old/corrupt PDF, preserve already-good
+        # data instead of generating a daily failure notification. We still fail
+        # when there is no usable current-month data, because then the widget
+        # genuinely needs attention.
+        if existing_covers_current_month(existing, now):
+            print(f"Warning: lunch menu refresh skipped; keeping existing data: {exc}", file=sys.stderr)
+            return 0
+        raise
+
     payload = {
         "source": SOURCE_URL,
         "menuMonth": f"{year:04d}-{month:02d}",
         "updatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "sourceLastModified": last_modified,
         "sourceSha256": digest,
-        "days": days,
+        "days": merge_days(existing, days, now),
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
@@ -205,6 +286,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except Exception as exc:  # GitHub Actions should fail loudly rather than publish bad data.
+    except Exception as exc:  # Fail only when no usable current-month fallback exists.
         print(f"Lunch menu import failed: {exc}", file=sys.stderr)
         raise
