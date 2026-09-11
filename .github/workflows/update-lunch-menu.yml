@@ -2,6 +2,11 @@ name: Update lunch menu
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/update-lunch-menu.yml'
+      - 'scripts/update_lunch_menu.py'
   schedule:
     # Roughly 7:15-8:15 AM Pacific depending on daylight saving time.
     - cron: '15 15 * * *'
@@ -12,6 +17,7 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -20,7 +26,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-          cache: pip
 
       - name: Install PDF parser
         run: python -m pip install --disable-pip-version-check pymupdf==1.26.4
