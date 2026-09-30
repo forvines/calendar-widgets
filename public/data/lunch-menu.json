@@ -1,9 +1,9 @@
 {
   "source": "https://www.cascadechristian.org/editoruploads/files/mcalder/menus/LunchMenu.pdf",
-  "menuMonth": "2026-09",
-  "updatedAt": "2026-09-09T16:17:00Z",
-  "sourceLastModified": null,
-  "sourceSha256": null,
+  "menuMonth": "2026-10",
+  "updatedAt": "2026-09-30T20:00:15.835892Z",
+  "sourceLastModified": "Wed, 30 Sep 2026 19:35:10 GMT",
+  "sourceSha256": "12c8319356904bdad59187aa71e3f9878a5e76415f09f15de748bbfa667aaf53",
   "days": {
     "2026-09-01": "",
     "2026-09-02": "FIRST DAY OF SCHOOL\nSausage Gravy\nBiscuit and Hash brown\nFruit",
@@ -26,6 +26,22 @@
     "2026-09-25": "Cheese Pizza\nVeggie/Fruit\nTreat",
     "2026-09-28": "Chili Mac and Cheese\nVeggie/Fruit",
     "2026-09-29": "Beef Taquito\nRefried Beans\nVeggie/Fruit",
-    "2026-09-30": "Pancake\nSausage Link\nYogurt\nFruit"
+    "2026-09-30": "Pancake\nSausage Link\nYogurt\nFruit",
+    "2026-10-05": "w/Marinara\nBreadstick\nVeggie/Fruit",
+    "2026-10-06": "Taquitos\nRefried Beans\nVeggie/Fruit",
+    "2026-10-07": "Burrito\nHash Brown\nYogurt\nFruit",
+    "2026-10-08": "Nuggets\nMac & Cheese\nVeggie/fruit",
+    "2026-10-12": "Chicken\nFried Rice\nw/veggies\nFruit",
+    "2026-10-13": "(Beef, Cheese,\nLettuce)\nChips & Salsa\nFruit",
+    "2026-10-14": "Sausage Links\nHash Brown\nFruit",
+    "2026-10-15": "Chips\nVeggie/Fruit",
+    "2026-10-19": "w/Penne Pasta\nBreadstick\nVeggie/Fruit",
+    "2026-10-20": "Quesadilla\nSpanish Rice\nVeggie/Fruit",
+    "2026-10-21": "Cheese Biscuit\nHash brown\nYogurt\nFruit",
+    "2026-10-22": "French Fries\nVeggie/Fruit",
+    "2026-10-26": "Corn Bread\nVeggie/Fruit",
+    "2026-10-27": "Spanish Rice\nVeggie/Fruit",
+    "2026-10-28": "Sausage Links\nYogurt\nFruit",
+    "2026-10-29": "Chips\nVeggie/Fruit"
   }
 }
