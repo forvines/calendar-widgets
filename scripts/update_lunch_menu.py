@@ -20,7 +20,7 @@ import fitz  # PyMuPDF
 
 SOURCE_URL = "https://www.cascadechristian.org/editoruploads/files/mcalder/menus/LunchMenu.pdf"
 OUTPUT = Path("public/data/lunch-menu.json")
-PARSER_VERSION = 3
+PARSER_VERSION = 4
 PACIFIC = ZoneInfo("America/Los_Angeles")
 MONTHS = {
     name.lower(): number
@@ -225,22 +225,70 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
 
     dates.sort(key=lambda d: (d["y0"], d["col"]))
 
-    row_ys = []
-    for item in sorted(dates, key=lambda d: d["y0"]):
-        if not row_ys or abs(item["y0"] - row_ys[-1]) > 12:
-            row_ys.append(item["y0"])
-        else:
-            row_ys[-1] = (row_ys[-1] + item["y0"]) / 2
+    # Build the weekday-only calendar rows. Some templates render a week's date
+    # labels as outlines/images, so the meal text is extractable even when the
+    # date numbers themselves are not. Use the detected later rows to infer any
+    # missing row anchor, then read every expected weekday cell.
+    weeks = [
+        week for week in calendar.Calendar(firstweekday=calendar.MONDAY).monthdayscalendar(year, month)
+        if any(week[col] for col in range(5))
+    ]
+    day_position = {
+        day: (row_index, col)
+        for row_index, week in enumerate(weeks)
+        for col, day in enumerate(week[:5])
+        if day
+    }
 
-    days: dict[str, str] = {}
+    anchors_by_row: dict[int, list[float]] = {}
     for item in dates:
-        row_index = min(range(len(row_ys)), key=lambda i: abs(row_ys[i] - item["y0"]))
-        bottom = row_ys[row_index + 1] - 4 if row_index + 1 < len(row_ys) else page.rect.height - 25
-        left, right = bounds[item["col"]]
+        position = day_position.get(item["day"])
+        if position is None:
+            continue
+        row_index, _ = position
+        anchors_by_row.setdefault(row_index, []).append(item["y0"])
+
+    row_anchor = {
+        row_index: sum(values) / len(values)
+        for row_index, values in anchors_by_row.items()
+    }
+    known_rows = sorted(row_anchor)
+    if not known_rows:
+        raise RuntimeError("Could not locate any calendar row anchors.")
+
+    spacing_samples = []
+    for left_row, right_row in zip(known_rows, known_rows[1:]):
+        if right_row > left_row:
+            spacing_samples.append(
+                (row_anchor[right_row] - row_anchor[left_row]) / (right_row - left_row)
+            )
+    if spacing_samples:
+        row_spacing = sum(spacing_samples) / len(spacing_samples)
+    else:
+        row_spacing = max(40.0, (page.rect.height - header_bottom - 40) / max(1, len(weeks)))
+
+    reference_row = known_rows[0]
+    reference_y = row_anchor[reference_row]
+    for row_index in range(len(weeks)):
+        row_anchor.setdefault(
+            row_index,
+            reference_y + (row_index - reference_row) * row_spacing,
+        )
+
+    date_word_indexes = {date["word_index"] for date in dates}
+    days: dict[str, str] = {}
+    price_prefixes = ("lunch prices", "(includes milk)", "k-2 ", "3-6 ", "milk $", "pizza day")
+
+    for day, (row_index, col) in day_position.items():
+        row_top = max(header_bottom + 2, row_anchor[row_index] - 1)
+        bottom = (
+            row_anchor[row_index + 1] - 4
+            if row_index + 1 < len(weeks)
+            else page.rect.height - 25
+        )
+        left, right = bounds[col]
 
         cell_words = []
-        date_word_indexes = {date["word_index"] for date in dates}
-        row_top = row_ys[row_index] - 1
         for word_index, word in enumerate(words):
             x0, y0, x1, y1, value = word[:5]
             center_x = (x0 + x1) / 2
@@ -248,17 +296,16 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
                 continue
             if not (row_top <= y0 < bottom):
                 continue
-            # Skip date labels themselves, but keep menu text that begins on the
-            # same visual line. The prior y1-based cutoff dropped the first food
-            # line from many cells.
             if word_index in date_word_indexes:
                 continue
             cell_words.append(word)
 
-        lines = group_lines(cell_words)
-        menu = "\n".join(lines).strip()
-        key = f"{year:04d}-{month:02d}-{item['day']:02d}"
-        days[key] = menu
+        lines = [
+            line for line in group_lines(cell_words)
+            if not line.lower().startswith(price_prefixes)
+        ]
+        key = f"{year:04d}-{month:02d}-{day:02d}"
+        days[key] = "\n".join(lines).strip()
 
     combined = dict(days)
     combined.update(text_days)
