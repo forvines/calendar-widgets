@@ -179,7 +179,7 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
     )
     minimum_dates = max(10, min(15, expected_weekdays - 5))
     text_days = parse_days_from_text(text, month, year)
-    if len(text_days) >= minimum_dates:
+    if len(text_days) == expected_weekdays:
         return text_days, month, year
 
     centers, header_bottom = weekday_centers(words)
@@ -224,11 +224,6 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
         dates.append(min(candidates, key=lambda item: (item["y0"], item["x0"])))
 
     dates.sort(key=lambda d: (d["y0"], d["col"]))
-    if len(dates) < minimum_dates:
-        raise RuntimeError(
-            f"Text parser found {len(text_days)} and geometry parser found {len(dates)} "
-            f"of {expected_weekdays} weekday calendar dates; refusing to publish a likely bad parse."
-        )
 
     row_ys = []
     for item in sorted(dates, key=lambda d: d["y0"]):
@@ -265,7 +260,20 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
         key = f"{year:04d}-{month:02d}-{item['day']:02d}"
         days[key] = menu
 
-    return dict(sorted(days.items())), month, year
+    combined = dict(days)
+    combined.update(text_days)
+    combined = dict(sorted(combined.items()))
+    if len(combined) < minimum_dates:
+        raise RuntimeError(
+            f"Text parser found {len(text_days)}, geometry parser found {len(days)}, "
+            f"and combined result found {len(combined)} of {expected_weekdays} weekday dates."
+        )
+    if len(combined) < expected_weekdays:
+        print(
+            f"Lunch parser partial coverage: text={len(text_days)}, geometry={len(days)}, "
+            f"combined={len(combined)}/{expected_weekdays}."
+        )
+    return combined, month, year
 
 
 def load_existing() -> dict:
