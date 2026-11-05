@@ -170,6 +170,17 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
     words = page.get_text("words", sort=True)
     text = page.get_text("text", sort=True)
     month, year = infer_month_year(text)
+
+    expected_weekdays = sum(
+        1
+        for day in range(1, calendar.monthrange(year, month)[1] + 1)
+        if calendar.weekday(year, month, day) < 5
+    )
+    minimum_dates = max(10, min(15, expected_weekdays - 5))
+    text_days = parse_days_from_text(text, month, year)
+    if len(text_days) >= minimum_dates:
+        return text_days, month, year
+
     centers, header_bottom = weekday_centers(words)
     bounds = column_bounds(centers, page.rect.width)
 
@@ -212,16 +223,10 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
         dates.append(min(candidates, key=lambda item: (item["y0"], item["x0"])))
 
     dates.sort(key=lambda d: (d["y0"], d["col"]))
-    expected_weekdays = sum(
-        1
-        for day in range(1, calendar.monthrange(year, month)[1] + 1)
-        if calendar.weekday(year, month, day) < 5
-    )
-    minimum_dates = max(10, min(15, expected_weekdays - 5))
     if len(dates) < minimum_dates:
         raise RuntimeError(
-            f"Only found {len(dates)} of {expected_weekdays} weekday calendar dates; "
-            "refusing to publish a likely bad parse."
+            f"Text parser found {len(text_days)} and geometry parser found {len(dates)} "
+            f"of {expected_weekdays} weekday calendar dates; refusing to publish a likely bad parse."
         )
 
     row_ys = []
