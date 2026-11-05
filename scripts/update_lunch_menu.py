@@ -20,6 +20,7 @@ import fitz  # PyMuPDF
 
 SOURCE_URL = "https://www.cascadechristian.org/editoruploads/files/mcalder/menus/LunchMenu.pdf"
 OUTPUT = Path("public/data/lunch-menu.json")
+PARSER_VERSION = 2
 PACIFIC = ZoneInfo("America/Los_Angeles")
 MONTHS = {
     name.lower(): number
@@ -322,8 +323,8 @@ def main() -> int:
         pdf_bytes, last_modified = fetch_pdf()
         digest = hashlib.sha256(pdf_bytes).hexdigest()
 
-        if existing.get("sourceSha256") == digest:
-            print("Lunch PDF unchanged; nothing to update.")
+        if existing.get("sourceSha256") == digest and existing.get("parserVersion") == PARSER_VERSION:
+            print("Lunch PDF unchanged and parser version is current; nothing to update.")
             return 0
 
         days, month, year = parse_days(pdf_bytes)
@@ -344,6 +345,7 @@ def main() -> int:
         "updatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "sourceLastModified": last_modified,
         "sourceSha256": digest,
+        "parserVersion": PARSER_VERSION,
         "days": merge_days(existing, days, now),
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
