@@ -1,9 +1,10 @@
 {
   "source": "https://www.cascadechristian.org/editoruploads/files/mcalder/menus/LunchMenu.pdf",
   "menuMonth": "2026-11",
-  "updatedAt": "2026-11-05T22:01:02.238242Z",
+  "updatedAt": "2026-11-05T22:02:21.338433Z",
   "sourceLastModified": "Fri, 30 Oct 2026 22:12:50 GMT",
   "sourceSha256": "e95fc8ee472ee438448332f234221d85be3e91e13fac1104a6649b58a8d03828",
+  "parserVersion": 2,
   "days": {
     "2026-09-21": "Teriyaki Chicken\nVeggie Fried Rice\nSpring Roll\nFruit",
     "2026-09-22": "Super Beef Nachos\nVeggie/Fruit",
