@@ -148,7 +148,7 @@ def parse_days_from_text(text: str, month: int, year: int) -> dict[str, str]:
         current_lines = []
 
     for line in lines:
-        m = re.fullmatch(r"(?:[1-9]|[12]\\d|3[01])", line)
+        m = re.fullmatch(r"(?:[1-9]|[12]\d|3[01])", line)
         if m:
             candidate = int(line)
             if candidate <= max_day and calendar.weekday(year, month, candidate) < 5 and (current_day is None or candidate > current_day):
@@ -191,7 +191,7 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
     for word_index, word in enumerate(words):
         x0, y0, x1, y1, value = word[:5]
         raw = value.strip()
-        if y0 <= header_bottom + 2 or not re.fullmatch(r"(?:[1-9]|[12]\\d|3[01])", raw):
+        if y0 <= header_bottom + 2 or not re.fullmatch(r"(?:[1-9]|[12]\d|3[01])", raw):
             continue
 
         day = int(raw)
