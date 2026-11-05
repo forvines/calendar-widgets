@@ -20,7 +20,7 @@ import fitz  # PyMuPDF
 
 SOURCE_URL = "https://www.cascadechristian.org/editoruploads/files/mcalder/menus/LunchMenu.pdf"
 OUTPUT = Path("public/data/lunch-menu.json")
-PARSER_VERSION = 2
+PARSER_VERSION = 3
 PACIFIC = ZoneInfo("America/Los_Angeles")
 MONTHS = {
     name.lower(): number
