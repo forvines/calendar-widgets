@@ -133,6 +133,35 @@ def group_lines(words: list[tuple]) -> list[str]:
     return result
 
 
+
+def parse_days_from_text(text: str, month: int, year: int) -> dict[str, str]:
+    max_day = calendar.monthrange(year, month)[1]
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    days: dict[str, str] = {}
+    current_day = None
+    current_lines: list[str] = []
+
+    def flush() -> None:
+        nonlocal current_day, current_lines
+        if current_day is not None:
+            days[f"{year:04d}-{month:02d}-{current_day:02d}"] = "\n".join(current_lines).strip()
+        current_lines = []
+
+    for line in lines:
+        m = re.fullmatch(r"(?:[1-9]|[12]\\d|3[01])", line)
+        if m:
+            candidate = int(line)
+            if candidate <= max_day and calendar.weekday(year, month, candidate) < 5 and (current_day is None or candidate > current_day):
+                flush()
+                current_day = candidate
+                continue
+        if current_day is not None and not line.lower().startswith(("lunch prices", "menu subject to change", "all raw veggies")):
+            current_lines.append(line)
+
+    flush()
+    return dict(sorted(days.items()))
+
+
 def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     if doc.page_count < 1:
