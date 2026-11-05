@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import calendar
 import hashlib
 import json
 import re
@@ -143,26 +144,56 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
     centers, header_bottom = weekday_centers(words)
     bounds = column_bounds(centers, page.rect.width)
 
-    # Calendar date numbers sit near the upper-left of each weekday cell. Using
-    # that geometry avoids mistaking prices or numbers in menu descriptions for dates.
-    dates = []
-    for word in words:
+    # Match numeric tokens to the weekday where that calendar date must occur.
+    # Older menus placed date numbers at the far-left of each cell; newer ones
+    # move them around, so relying on an x-position percentage is too brittle.
+    candidates_by_day: dict[int, list[dict]] = {}
+    for word_index, word in enumerate(words):
         x0, y0, x1, y1, value = word[:5]
-        if y0 <= header_bottom + 2 or not re.fullmatch(r"(?:[1-9]|[12]\d|3[01])", value.strip()):
+        raw = value.strip()
+        if y0 <= header_bottom + 2 or not re.fullmatch(r"(?:[1-9]|[12]\\d|3[01])", raw):
             continue
-        for col, (left, right) in enumerate(bounds):
-            width = right - left
-            if left <= x0 < right and x0 <= left + width * 0.28:
-                dates.append({"day": int(value), "col": col, "x0": x0, "y0": y0, "y1": y1})
-                break
 
-    # Keep only the first geometric occurrence of each calendar day.
-    unique = {}
-    for item in sorted(dates, key=lambda d: (d["y0"], d["col"])):
-        unique.setdefault(item["day"], item)
-    dates = list(unique.values())
-    if len(dates) < 15:
-        raise RuntimeError(f"Only found {len(dates)} calendar dates; refusing to publish a likely bad parse.")
+        day = int(raw)
+        try:
+            weekday = calendar.weekday(year, month, day)
+        except ValueError:
+            continue
+        if weekday >= 5:
+            continue
+
+        center_x = (x0 + x1) / 2
+        left, right = bounds[weekday]
+        if not (left <= center_x <= right):
+            continue
+
+        candidates_by_day.setdefault(day, []).append({
+            "day": day,
+            "col": weekday,
+            "word_index": word_index,
+            "x0": x0,
+            "y0": y0,
+            "y1": y1,
+        })
+
+    dates = []
+    for day, candidates in candidates_by_day.items():
+        # The actual date label is the uppermost matching token in its expected
+        # weekday column. This rejects stray numbers that may appear in menu text.
+        dates.append(min(candidates, key=lambda item: (item["y0"], item["x0"])))
+
+    dates.sort(key=lambda d: (d["y0"], d["col"]))
+    expected_weekdays = sum(
+        1
+        for day in range(1, calendar.monthrange(year, month)[1] + 1)
+        if calendar.weekday(year, month, day) < 5
+    )
+    minimum_dates = max(10, min(15, expected_weekdays - 5))
+    if len(dates) < minimum_dates:
+        raise RuntimeError(
+            f"Only found {len(dates)} of {expected_weekdays} weekday calendar dates; "
+            "refusing to publish a likely bad parse."
+        )
 
     row_ys = []
     for item in sorted(dates, key=lambda d: d["y0"]):
@@ -178,15 +209,19 @@ def parse_days(pdf_bytes: bytes) -> tuple[dict[str, str], int, int]:
         left, right = bounds[item["col"]]
 
         cell_words = []
-        for word in words:
+        date_word_indexes = {date["word_index"] for date in dates}
+        row_top = row_ys[row_index] - 1
+        for word_index, word in enumerate(words):
             x0, y0, x1, y1, value = word[:5]
             center_x = (x0 + x1) / 2
             if not (left + 2 <= center_x <= right - 2):
                 continue
-            if not (item["y1"] + 1 <= y0 < bottom):
+            if not (row_top <= y0 < bottom):
                 continue
-            # Avoid copying a neighboring date number into the menu body.
-            if re.fullmatch(r"(?:[1-9]|[12]\d|3[01])", value.strip()) and x0 <= left + (right - left) * 0.28:
+            # Skip date labels themselves, but keep menu text that begins on the
+            # same visual line. The prior y1-based cutoff dropped the first food
+            # line from many cells.
+            if word_index in date_word_indexes:
                 continue
             cell_words.append(word)
 
