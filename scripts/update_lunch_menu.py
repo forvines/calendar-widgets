@@ -151,7 +151,7 @@ def parse_days_from_text(text: str, month: int, year: int) -> dict[str, str]:
         m = re.fullmatch(r"(?:[1-9]|[12]\d|3[01])", line)
         if m:
             candidate = int(line)
-            if candidate <= max_day and calendar.weekday(year, month, candidate) < 5 and (current_day is None or candidate > current_day):
+            if candidate <= max_day and calendar.weekday(year, month, candidate) < 5 and candidate != current_day and f"{year:04d}-{month:02d}-{candidate:02d}" not in days:
                 flush()
                 current_day = candidate
                 continue
